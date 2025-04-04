@@ -5,6 +5,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
+        worksans: ['Work Sans', 'sans-serif'],
         pacifico: ['Pacifico', 'cursive'],
         worksans: ['Work Sans', 'sans-serif'],
       },
