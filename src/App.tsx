@@ -147,7 +147,7 @@ function App() {
                 {/* 👋 Info */}
                   <div className="flex-1 space-y-6 bg-slate-800 border border-violet-500 rounded-2xl p-6 shadow-md">
                   <h2 className="text-2xl font-bold text-sky-400 flex items-center gap-2 ">
-                  <img src={`${import.meta.env.BASE_URL}profile-gradient.jpg`} alt="Profile Icon" />
+                  <img src={`${import.meta.env.BASE_URL}profile-gradient.jpg`} alt="Profile Icon" className="w-6 h-6" />
                     Who Am I?
                   </h2>
                   <p className="text-slate-300 text-base leading-relaxed">
