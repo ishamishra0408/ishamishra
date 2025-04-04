@@ -32,7 +32,7 @@ const WelcomeAudio = () => {
 
   return (
     <>
-      <audio ref={audioRef} src="/welcome-audio.mp3" preload="auto" />
+     <audio src={`${import.meta.env.BASE_URL}welcome-audio.mp3`} preload="auto" ref={audioRef} />
       {showPlay && (
         <div className="fixed bottom-6 right-6 bg-violet-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 cursor-pointer hover:bg-violet-700 transition" onClick={handlePlay}>
           🎧 Unleash my Anthem!

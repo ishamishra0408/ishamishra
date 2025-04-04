@@ -132,14 +132,7 @@ function App() {
                 <a href="mailto:ishamishra0408@gmail.com" className="hover:text-violet-700 transition-colors">
                   <Mail className="w-6 h-6" />
                 </a>
-                <a
-                  href="/IshaSDEResume2025.pdf"
-                  download="IshaSDEResume2025.pdf"
-                  className="hover:text-violet-700 transition-colors flex items-center gap-2"
-                >
-                  <Download className="w-6 h-6" />
-                  <span>Resume</span>
-                </a>
+                <a href={`${import.meta.env.BASE_URL}IshaSDEResume2025.pdf`} download>Resume</a>
               </div>
             </header>
 
@@ -148,17 +141,13 @@ function App() {
                 
                 {/* 👤 Image */}
                 <div className="w-60 h-60 rounded-xl overflow-hidden shadow-lg">
-                  <img
-                    src="/LinkedInImage.jpeg"
-                    alt="Isha Mishra"
-                    className="object-cover w-full h-full"
-                  />
+                <img src={`${import.meta.env.BASE_URL}LinkedInImage.jpeg`} alt="Isha Mishra" />
                 </div>
 
                 {/* 👋 Info */}
                   <div className="flex-1 space-y-6 bg-slate-800 border border-violet-500 rounded-2xl p-6 shadow-md">
                   <h2 className="text-2xl font-bold text-sky-400 flex items-center gap-2 ">
-                    <img src="/profile-gradient.jpg" alt="profile icon" className="w-6 h-6" />
+                  <img src={`${import.meta.env.BASE_URL}profile-gradient.jpg`} alt="Profile Icon" />
                     Who Am I?
                   </h2>
                   <p className="text-slate-300 text-base leading-relaxed">
