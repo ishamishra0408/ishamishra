@@ -110,9 +110,14 @@ function App() {
           </a>
           {/* Nav Links */}
           <ul className="flex space-x-6 text-sm font-medium text-violet-400">
-          <li>
-            <a href="#about" className="hover:text-violet-300 transition-colors">About</a>
-          </li>
+            <li>
+              <a
+                href="#about"
+                className="hover:text-violet-300 transition-colors"
+              >
+                About
+              </a>
+            </li>
 
             <li>
               <a
@@ -177,13 +182,13 @@ function App() {
 
             {/* Name */}
             <h1 className="text-7xl sm:text-8xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-violet-600 font-pacifico">
-            <motion.h1
+              <motion.h1
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1 }}
                 className="text-7xl sm:text-8xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-violet-600 font-pacifico"
               >
-              Isha Mishra
+                Isha Mishra
               </motion.h1>
             </h1>
 
@@ -193,7 +198,8 @@ function App() {
               Senior Software Engineer
             </p>
             <p className="text-slate-400 mt-2 text-sm italic">
-              Passionate about building elegant backend systems and delightful user experiences.
+              Passionate about building elegant backend systems and delightful
+              user experiences.
             </p>
             {/* Icons and Resume */}
             <div className="flex justify-center items-center flex-wrap gap-5 mt-6 text-violet-400">
@@ -561,7 +567,7 @@ function App() {
 
         <section
           id="contact"
-          className="h-screen flex justify-center items-center px-4 bg-gradient-to-br from-[#0B1120] to-[#0F172A]"
+          className="py-20 flex justify-center items-center px-4 bg-gradient-to-br from-[#0B1120] to-[#0F172A]"
         >
           <div className="max-w-5xl mx-auto space-y-8">
             <h2 className="text-2xl font-bold text-sky-400">Get in Touch!</h2>
@@ -647,7 +653,6 @@ function App() {
           </div>
         </section>
       </motion.div>
-      <div className="h-screen bg-gradient-to-br from-white to-gray-100 dark:from-[#0B1120] dark:to-[#0F172A] flex flex-col justify-center items-center px-4 text-center"></div>
     </>
   );
 }
