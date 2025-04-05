@@ -236,16 +236,17 @@ function App() {
         <section id="about" className="py-12">
           <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center gap-10">
             {/* 👤 Image */}
-            <div className="w-60 h-60 rounded-xl overflow-hidden shadow-lg">
-              <img
-                src={`${import.meta.env.BASE_URL}LinkedInImage.jpeg`}
-                alt="Isha Mishra"
-              />
-            </div>
+            <div className="w-60 h-60 rounded-3xl overflow-hidden shadow-xl border-2 border-violet-500 bg-gradient-to-br from-violet-600/10 to-indigo-900/10 hover:shadow-violet-500/50 transition-all duration-300">
+            <img
+              src={`${import.meta.env.BASE_URL}LinkedInImage1.jpeg`}
+              alt="Isha Mishra"
+              className="w-full h-full object-cover"
+            />
+          </div>
 
             {/* 👋 Info */}
-            <div className="flex-1 space-y-6 bg-slate-800 border border-violet-500 rounded-2xl p-6 shadow-md">
-              <h2 className="text-2xl font-bold text-sky-400 flex items-center gap-2 ">
+            <div className="flex-1 space-y-6 bg-slate-800/40 backdrop-blur-md border border-violet-500 rounded-2xl p-6 transition-all duration-300 hover:shadow-[0_0_20px_#a855f7] hover:border-violet-400">
+            <h2 className="text-2xl font-bold text-sky-400 flex items-center gap-2 transition-all duration-300 hover:text-violet-400 hover:drop-shadow-[0_0_10px_rgba(168,85,247,0.9)]">
                 <img
                   src={`${import.meta.env.BASE_URL}profile-gradient.jpg`}
                   alt="Profile Icon"
@@ -309,7 +310,7 @@ function App() {
           id="education"
           className="h-screen flex flex-col justify-center items-center px-6 bg-[#0F172A]"
         >
-          <h2 className="text-2xl font-bold text-sky-400 flex items-center gap-2 mb-6">
+          <h2 className="text-2xl font-bold text-sky-400 flex items-center gap-2 mb-6 transition-all duration-300 hover:text-violet-400 hover:drop-shadow-[0_0_10px_rgba(168,85,247,0.9)]">
             <svg
               className="w-6 h-6 text-violet-500"
               fill="none"
@@ -333,7 +334,7 @@ function App() {
 
           <div className="space-y-6">
             {/* Card 1 */}
-            <div className="bg-[#1e293b] border border-violet-500 rounded-xl p-6 text-slate-200 shadow-lg">
+            <div className="bg-[#1e293b] border border-violet-500 rounded-xl p-6 text-slate-200 shadow-lg transition-all duration-300 hover:shadow-[0_0_20px_#a855f7] hover:border-violet-400">
               <h3 className="text-lg font-semibold mb-1">
                 Masters in Computer Science
               </h3>
@@ -345,7 +346,7 @@ function App() {
             </div>
 
             {/* Card 2 */}
-            <div className="bg-[#1e293b] border border-violet-500 rounded-xl p-6 text-slate-200 shadow-lg">
+            <div className="bg-[#1e293b] border border-violet-500 rounded-xl p-6 text-slate-200 shadow-lg transition-all duration-300 hover:shadow-[0_0_20px_#a855f7] hover:border-violet-400">
               <h3 className="text-lg font-semibold mb-1">
                 Bachelor of Technology – Electrical, Electronics and
                 Communications
@@ -360,7 +361,7 @@ function App() {
             </div>
 
             {/* Card 3 */}
-            <div className="bg-[#1e293b] border border-violet-500 rounded-xl p-6 text-slate-200 shadow-lg">
+            <div className="bg-[#1e293b] border border-violet-500 rounded-xl p-6 text-slate-200 shadow-lg transition-all duration-300 hover:shadow-[0_0_20px_#a855f7] hover:border-violet-400">
               <h3 className="text-lg font-semibold mb-1">
                 Senior School (10+2)
               </h3>
@@ -379,13 +380,13 @@ function App() {
           id="experience"
           className="h-screen flex flex-col justify-center items-center space-y-6 px-6 bg-[#0F172A]"
         >
-          <h2 className="text-2xl font-semibold text-sky-400 flex items-center gap-2">
+          <h2 className="text-2xl font-semibold text-sky-400 flex items-center gap-2 transition-all duration-300 hover:text-violet-400 hover:drop-shadow-[0_0_10px_rgba(168,85,247,0.9)]">
             <Briefcase className="w-6 h-6 text-violet-400" />
             Experience
           </h2>
           <div className="space-y-8">
             {/* 💼 LetsTransport Block */}
-            <div className="bg-slate-800 rounded-xl border border-violet-700 p-6 space-y-4 shadow-md">
+            <div className="bg-slate-800 rounded-xl border border-violet-700 p-6 space-y-4 shadow-md transition-all duration-300 hover:shadow-[0_0_20px_#a855f7] hover:border-violet-500">
               <div className="flex justify-between items-center flex-wrap gap-2">
                 <h3 className="text-xl font-semibold text-slate-200">
                   LetsTransport (Series E, B2B Logistics)
@@ -432,7 +433,7 @@ function App() {
             </div>
 
             {/* 💼 Oracle Block */}
-            <div className="bg-slate-800 rounded-xl border border-violet-700 p-6 space-y-4 shadow-md">
+            <div className="bg-slate-800 rounded-xl border border-violet-700 p-6 space-y-4 shadow-md transition-all duration-300 hover:shadow-[0_0_20px_#a855f7] hover:border-violet-500">
               <div className="flex justify-between items-center flex-wrap gap-2">
                 <h3 className="text-xl font-semibold text-slate-200">
                   Oracle (Primavera in C&E vertical)
@@ -482,7 +483,7 @@ function App() {
           id="skills"
           className="h-screen flex flex-col justify-center items-center space-y-10 px-6 bg-[#0B1120]"
         >
-          <h2 className="text-3xl font-semibold text-sky-400 animate-pulse">
+          <h2 className="text-3xl font-semibold text-sky-400 transition-all duration-300 hover:text-violet-400 hover:drop-shadow-[0_0_10px_rgba(168,85,247,0.9)]">
             Skills
           </h2>
 
@@ -559,7 +560,7 @@ function App() {
           id="blogs"
           className="h-screen flex flex-col justify-center items-center space-y-6 px-6 bg-[#0F172A]"
         >
-          <h2 className="text-2xl font-semibold text-sky-400">
+          <h2 className="text-2xl font-semibold text-sky-400 transition-all duration-300 hover:text-violet-400 hover:drop-shadow-[0_0_10px_rgba(168,85,247,0.9)]">
             Blogs (Upcoming)
           </h2>
           <p className="text-slate-400 italic">Coming soon...</p>
@@ -570,9 +571,10 @@ function App() {
           className="py-20 flex justify-center items-center px-4 bg-gradient-to-br from-[#0B1120] to-[#0F172A]"
         >
           <div className="max-w-5xl mx-auto space-y-8">
-            <h2 className="text-2xl font-bold text-sky-400">Get in Touch!</h2>
+          <h2 className="text-2xl font-bold text-sky-400 transition-all duration-300 hover:text-violet-400 hover:drop-shadow-[0_0_10px_rgba(168,85,247,0.9)]">
+          Get in Touch!</h2>
 
-            <div className="rounded-2xl overflow-hidden border border-violet-400 shadow-xl grid grid-cols-1 md:grid-cols-3">
+            <div className="rounded-2xl overflow-hidden border border-violet-400 shadow-xl grid grid-cols-1 md:grid-cols-3 transition-all duration-300 hover:shadow-[0_0_20px_#a855f7] hover:border-violet-500">
               <div className="md:col-span-1 bg-gradient-to-b from-[#1E293B] to-[#0F172A] text-white p-8 space-y-6">
                 <h3 className="text-2xl font-bold">Contact Information</h3>
                 <div className="space-y-4 text-sm">
