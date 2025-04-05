@@ -571,8 +571,10 @@ function App() {
           className="py-20 flex justify-center items-center px-4 bg-gradient-to-br from-[#0B1120] to-[#0F172A]"
         >
           <div className="max-w-5xl mx-auto space-y-8">
-          <h2 className="text-2xl font-bold text-sky-400 transition-all duration-300 hover:text-violet-400 hover:drop-shadow-[0_0_10px_rgba(168,85,247,0.9)]">
-          Get in Touch!</h2>
+          <h2 className="text-2xl font-bold text-sky-400 text-center mb-10 transition-all duration-300 hover:text-violet-400 hover:drop-shadow-[0_0_10px_rgba(168,85,247,0.9)]">
+            Get in Touch!
+          </h2>
+
 
             <div className="rounded-2xl overflow-hidden border border-violet-400 shadow-xl grid grid-cols-1 md:grid-cols-3 transition-all duration-300 hover:shadow-[0_0_20px_#a855f7] hover:border-violet-500">
               <div className="md:col-span-1 bg-gradient-to-b from-[#1E293B] to-[#0F172A] text-white p-8 space-y-6">
