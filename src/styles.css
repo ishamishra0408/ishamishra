@@ -306,10 +306,10 @@ p {
   position: relative;
 }
 /* The copy sits in the middle of the space above the logo strip. */
+/* Like deccan.ai: the copy sits low on the left, just above the logo strip, and the binary field
+   keeps the rest of the screen. */
 .hero-copy {
   margin-top: auto;
-  margin-bottom: auto;
-  padding-top: 2rem;
 }
 .pill {
   display: inline-block;
@@ -323,7 +323,6 @@ p {
 }
 .hero-title {
   margin-top: 1.25rem;
-  max-width: 15ch;
   font-size: clamp(2.25rem, 1.4rem + 2.6vw, 3.25rem);
   font-weight: 300;
   letter-spacing: -0.035em;
@@ -335,7 +334,7 @@ p {
 }
 .hero-sub {
   margin-top: 1rem;
-  max-width: 34rem;
+  max-width: 40rem;
   color: var(--soft);
   font-size: 1rem;
   font-weight: 300;
@@ -373,7 +372,7 @@ p {
   box-shadow: 0 0 0 4px rgba(95, 211, 141, 0.16);
 }
 .names {
-  padding: 3.5rem 0 2.25rem;
+  padding: 3rem 0 2.25rem;
 }
 /* Over the live field the muted grey drops below AA, so this label uses the lighter tone. */
 .names .label {
