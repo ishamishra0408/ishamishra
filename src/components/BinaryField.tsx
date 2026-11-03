@@ -1,24 +1,43 @@
 import { useEffect, useRef } from "react";
 
-// The site's background: runs of binary digits on deep navy, brighter toward the middle and in
-// loose horizontal bands. Drawn on one fixed canvas (nothing to download). A few digits flip
-// every tick. Around the pointer the digits lift and bob, and moving it (or tapping) drops
-// ripples that push the digits outward like rings on water, then let them settle.
-// All motion stops for reduced motion and while the tab is hidden.
+// The site's background: binary digits on deep navy, lit like a dithered field. A slow wave of
+// light drifts across the grid and a 4×4 ordered-dither threshold decides which digits it lights,
+// so the light reads as soft halftone bands while every other digit stays faint. The pointer
+// lights the digits under it and leaves rings of light that spread and fade, and a few digits
+// spark white inside the glow. One fixed canvas, repainted only where a digit changed. A still
+// frame for reduced motion; nothing runs while the tab is hidden.
 
 const FONT = 13; // CSS px
 const CELL_W = 9;
 const CELL_H = 17;
 const LEVELS = 16;
+const TAU = Math.PI * 2;
 
-const HOVER_R = 120; // px around the pointer where digits float
-const RIPPLE_LIFE = 1100; // ms
-const RIPPLE_SPEED = 0.26; // px per ms
-const RIPPLE_W = 24; // half-width of the ring, px
-const MAX_RIPPLES = 4;
+// Ordered-dither thresholds: a digit is lit where the light beats its cell's threshold.
+const BAYER = [
+  [0, 8, 2, 10],
+  [12, 4, 14, 6],
+  [3, 11, 1, 9],
+  [15, 7, 13, 5],
+].map((row) => row.map((v) => (v + 0.5) / 16));
 
-type Ripple = { x: number; y: number; t: number; a: number };
-type Rect = { c0: number; c1: number; r0: number; r1: number };
+const DRIFT = 0.24; // how fast the wave of light moves, per second
+const CORE = 46; // px: the light right under the pointer
+const HALO = 180; // px: the softer glow around it
+const RING_SPEED = 190; // px per second
+const RING_W = 15; // px: a ring's half-thickness
+const RING_FADE = 2.3; // per second
+const RING_ECHO = 0.18; // s: a fainter ring follows each one
+const MAX_RINGS = 6;
+const FRAME_IDLE = 33; // ms between frames while only the wave moves
+const FRAME_LIVE = 16; // ... and while the pointer or a ring is in play
+
+type Ring = { x: number; y: number; t: number; a: number };
+
+const smooth = (x: number) => {
+  const k = x < 0 ? 0 : x > 1 ? 1 : x;
+  return k * k * (3 - 2 * k);
+};
 
 export function BinaryField() {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -33,23 +52,43 @@ export function BinaryField() {
     const colour = (b: number) =>
       `rgba(${Math.round(60 + b * 150)}, ${Math.round(150 + b * 95)}, ${Math.round(205 + b * 50)}, ${(0.1 + b * 0.85).toFixed(3)})`;
     const palette = Array.from({ length: LEVELS }, (_, i) => colour(i / (LEVELS - 1)));
-    const BASE_MAX = 11; // resting digits stay below the top levels, which the ripples use
 
     let w = 0;
     let h = 0;
     let dpr = 1;
     let cols = 0;
     let rows = 0;
-    let level = new Int8Array(0); // brightness level per cell; -1 is a gap
-    let base = new Float32Array(0); // each cell's resting brightness
     let digit = new Uint8Array(0);
-
-    const glow = (x: number, y: number) => {
-      const dx = (x / w - 0.5) / 0.7;
-      const dy = (y / h - 0.45) / 0.8;
-      return Math.max(0.15, 1 - Math.sqrt(dx * dx + dy * dy));
-    };
+    let gap = new Uint8Array(0); // the spaces between runs of digits
+    let shown = new Int8Array(0); // the level each digit was last painted at
+    let glow = new Float32Array(0); // brighter toward the middle of the screen
+    let seedS = new Float32Array(0); // each digit's own shimmer phase
+    let seedC = new Float32Array(0);
+    let spark = new Uint8Array(0); // the few digits that can flash white
+    let colA = new Float32Array(0);
+    let colS2 = colA;
+    let colC2 = colA;
+    let colS3 = colA;
+    let colC3 = colA;
+    let rowS2 = colA;
+    let rowC2 = colA;
+    let rowS3 = colA;
+    let rowC3 = colA;
+    let rowD = colA;
+    const buckets: number[][] = Array.from({ length: LEVELS }, () => []);
     const baseline = (r: number) => r * CELL_H + CELL_H - 4;
+
+    let t = Math.random() * 40; // where the wave starts
+    let rings: Ring[] = [];
+    let hasPointer = false;
+    let weight = 0; // how present the pointer's glow is, 0 to 1
+    let px = 0;
+    let py = 0;
+    let wx = 0; // the glow's centre, a step behind the pointer
+    let wy = 0;
+    let spawnX = -1e4;
+    let spawnY = -1e4;
+    let spawnT = -1e9;
 
     const build = () => {
       w = window.innerWidth;
@@ -58,8 +97,6 @@ export function BinaryField() {
       // from a zero-size canvas throws. Wait for the resize that gives it a size.
       if (!w || !h) {
         cols = rows = 0;
-        level = new Int8Array(0);
-        lastRect = null;
         return;
       }
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -69,7 +106,6 @@ export function BinaryField() {
       }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
       const g = gctx.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.45, Math.max(w, h) * 0.75);
       g.addColorStop(0, "#103c58");
       g.addColorStop(0.55, "#0a2940");
@@ -77,61 +113,89 @@ export function BinaryField() {
       gctx.fillStyle = g;
       gctx.fillRect(0, 0, w, h);
       ctx.drawImage(ground, 0, 0, w, h);
+      ctx.font = `${FONT}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
 
       cols = Math.ceil(w / CELL_W);
       rows = Math.ceil(h / CELL_H);
-      level = new Int8Array(cols * rows);
-      base = new Float32Array(cols * rows);
-      digit = new Uint8Array(cols * rows);
-      ctx.font = `${FONT}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
-
-      // Loose horizontal bands, like light catching rows of a terminal.
-      const band = Array.from({ length: rows }, (_, r) => 0.55 + 0.45 * Math.sin(r * 0.37 + Math.sin(r * 0.11) * 2.2));
+      const n = cols * rows;
+      digit = new Uint8Array(n);
+      gap = new Uint8Array(n);
+      shown = new Int8Array(n).fill(-1);
+      glow = new Float32Array(n);
+      seedS = new Float32Array(n);
+      seedC = new Float32Array(n);
+      spark = new Uint8Array(n);
       for (let r = 0; r < rows; r++) {
         let c = 0;
         while (c < cols) {
           const run = 1 + Math.floor(Math.random() * 8);
           for (let k = 0; k < run && c < cols; k++, c++) {
             const i = r * cols + c;
-            let b = band[r] * glow(c * CELL_W, r * CELL_H) * (0.25 + 0.75 * Math.random() ** 2);
-            if (Math.random() < 0.025) b = Math.min(1, b + 0.6);
-            base[i] = b;
-            level[i] = Math.round(b * BASE_MAX);
+            const dx = ((c + 0.5) / cols - 0.5) / 0.7;
+            const dy = ((r + 0.5) / rows - 0.45) / 0.8;
+            glow[i] = Math.max(0.15, 1 - Math.sqrt(dx * dx + dy * dy));
             digit[i] = Math.random() < 0.5 ? 0 : 1;
-            ctx.fillStyle = palette[level[i]];
-            ctx.fillText(digit[i] ? "1" : "0", c * CELL_W, baseline(r));
+            const a = Math.random() * TAU;
+            seedS[i] = Math.sin(a);
+            seedC[i] = Math.cos(a);
+            spark[i] = Math.random() < 0.04 ? 1 : 0;
           }
-          const gap = 1 + Math.floor(Math.random() * 3);
-          for (let k = 0; k < gap && c < cols; k++, c++) level[r * cols + c] = -1;
+          const gaps = 1 + Math.floor(Math.random() * 3);
+          for (let k = 0; k < gaps && c < cols; k++, c++) gap[r * cols + c] = 1;
         }
       }
-      ripples = [];
-      lastRect = null;
+      colA = new Float32Array(cols);
+      colS2 = new Float32Array(cols);
+      colC2 = new Float32Array(cols);
+      colS3 = new Float32Array(cols);
+      colC3 = new Float32Array(cols);
+      rowS2 = new Float32Array(rows);
+      rowC2 = new Float32Array(rows);
+      rowS3 = new Float32Array(rows);
+      rowC3 = new Float32Array(rows);
+      rowD = new Float32Array(rows);
+      rings = [];
+      paint(performance.now() / 1000);
     };
 
-    // ---- Pointer: floating digits and ripples ----
-    let ripples: Ripple[] = [];
-    let lastRect: Rect | null = null;
-    let px = -1e4;
-    let py = -1e4;
-    let lastMove = -1e9;
-    let hover = 0;
-    let spawnX = -1e4;
-    let spawnY = -1e4;
-    let spawnT = 0;
-    let raf = 0;
-
-    const inRect = (i: number, rc: Rect | null) => {
-      if (!rc) return false;
-      const c = i % cols;
-      const r = (i / cols) | 0;
-      return c >= rc.c0 && c <= rc.c1 && r >= rc.r0 && r <= rc.r1;
+    // The wave is a sum of a few slow sines across the grid, kept separable (one row of numbers
+    // per column and per row) so a frame costs a handful of multiplies per digit.
+    const prepWave = () => {
+      const sway = 0.3 * Math.sin(0.23 * t);
+      for (let c = 0; c < cols; c++) {
+        const u = c / cols;
+        colA[c] = Math.sin(TAU * (1.3 * u + sway) + 0.7 * t);
+        const p2 = -TAU * 0.8 * u;
+        colS2[c] = Math.sin(p2);
+        colC2[c] = Math.cos(p2);
+        const p3 = TAU * 2.9 * u;
+        colS3[c] = Math.sin(p3);
+        colC3[c] = Math.cos(p3);
+      }
+      const roll = 0.9 * Math.sin(0.17 * t);
+      for (let r = 0; r < rows; r++) {
+        const v = r / rows;
+        const p2 = TAU * 1.8 * v - 0.55 * t + 1.3;
+        rowS2[r] = Math.sin(p2);
+        rowC2[r] = Math.cos(p2);
+        const p3 = TAU * 2.4 * v + 0.35 * t + 3.9;
+        rowS3[r] = Math.sin(p3);
+        rowC3[r] = Math.cos(p3);
+        rowD[r] = Math.cos(TAU * (1.1 * v - roll) - 0.45 * t);
+      }
     };
 
-    // Redraws only the patch of field the effect touches (plus last frame's patch, to settle it).
-    const render = (now: number) => {
-      if (!cols) return false;
-      ripples = ripples.filter((rp) => now - rp.t < RIPPLE_LIFE);
+    const paint = (sec: number) => {
+      if (!cols) return;
+      prepWave();
+      const shimmerS = Math.sin(1.3 * t);
+      const shimmerC = Math.cos(1.3 * t);
+      const blinkS = Math.sin(0.55 * sec);
+      const blinkC = Math.cos(0.55 * sec);
+
+      // The rings still alight, and the patch of grid the pointer and they can reach.
+      const live: { x: number; y: number; r1: number; r2: number; f: number }[] = [];
+      rings = rings.filter((rg) => Math.exp(-(sec - rg.t) * RING_FADE) >= 0.02);
       let x0 = Infinity;
       let y0 = Infinity;
       let x1 = -Infinity;
@@ -142,111 +206,163 @@ export function BinaryField() {
         x1 = Math.max(x1, x + rad);
         y1 = Math.max(y1, y + rad);
       };
-      if (hover > 0.01) reach(px, py, HOVER_R + 16);
-      for (const rp of ripples) reach(rp.x, rp.y, (now - rp.t) * RIPPLE_SPEED + RIPPLE_W * 2 + 16);
+      for (const rg of rings) {
+        const age = sec - rg.t;
+        const r1 = age * RING_SPEED;
+        live.push({ x: rg.x, y: rg.y, r1, r2: Math.max(0, age - RING_ECHO) * RING_SPEED, f: Math.exp(-age * RING_FADE) * 0.9 * rg.a });
+        reach(rg.x, rg.y, r1 + 3 * RING_W);
+      }
+      const lit = weight > 0.004;
+      if (lit) {
+        reach(px, py, 3 * CORE);
+        reach(wx, wy, HALO);
+      }
+      const c0 = Math.max(0, Math.floor(x0 / CELL_W));
+      const c1 = Math.min(cols - 1, Math.floor(x1 / CELL_W));
+      const r0 = Math.max(0, Math.floor(y0 / CELL_H));
+      const r1 = Math.min(rows - 1, Math.floor(y1 / CELL_H));
+      const core2 = 2 * CORE * CORE;
+      const halo2 = HALO * HALO;
+      const ring2 = 2 * RING_W * RING_W;
+      const band = 3 * RING_W;
 
-      const cur: Rect | null =
-        x1 < x0
-          ? null
-          : {
-              c0: Math.max(0, Math.floor(x0 / CELL_W) - 1),
-              c1: Math.min(cols - 1, Math.ceil(x1 / CELL_W) + 1),
-              r0: Math.max(0, Math.floor(y0 / CELL_H) - 1),
-              r1: Math.min(rows - 1, Math.ceil(y1 / CELL_H) + 1),
-            };
-      const rc = cur && lastRect
-        ? { c0: Math.min(cur.c0, lastRect.c0), c1: Math.max(cur.c1, lastRect.c1), r0: Math.min(cur.r0, lastRect.r0), r1: Math.max(cur.r1, lastRect.r1) }
-        : cur ?? lastRect;
-      lastRect = cur;
-      if (!rc || rc.c1 < rc.c0 || rc.r1 < rc.r0) return false;
-
-      const rx = rc.c0 * CELL_W;
-      const ry = rc.r0 * CELL_H;
-      const rw = (rc.c1 - rc.c0 + 1) * CELL_W;
-      const rh = (rc.r1 - rc.r0 + 1) * CELL_H;
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(rx, ry, rw, rh);
-      ctx.clip();
-      ctx.drawImage(ground, rx * dpr, ry * dpr, rw * dpr, rh * dpr, rx, ry, rw, rh);
-      const hr2 = HOVER_R * HOVER_R;
-      for (let r = rc.r0; r <= rc.r1; r++) {
-        for (let c = rc.c0; c <= rc.c1; c++) {
-          const i = r * cols + c;
-          if (level[i] < 0) continue;
-          const cx = c * CELL_W + CELL_W / 2;
-          const cy = r * CELL_H + CELL_H / 2;
-          let dx = 0;
-          let dy = 0;
-          let lift = 0;
-          if (hover > 0.01) {
-            const ex = cx - px;
-            const ey = cy - py;
-            const d2 = ex * ex + ey * ey;
-            if (d2 < hr2) {
-              const d = Math.sqrt(d2) || 1;
-              const f = (1 - d / HOVER_R) ** 2 * hover;
-              const ph = now * 0.0028 + i * 0.9;
-              dy -= f * (7 + 4 * Math.sin(ph));
-              dx += f * (3 * Math.cos(ph * 0.8) + (ex / d) * 6);
-              lift += f * 0.55;
-            }
-          }
-          for (const rp of ripples) {
-            const age = now - rp.t;
-            const ex = cx - rp.x;
-            const ey = cy - rp.y;
-            const d = Math.sqrt(ex * ex + ey * ey) || 1;
-            const k = Math.exp(-(((d - age * RIPPLE_SPEED) / RIPPLE_W) ** 2));
-            if (k < 0.02) continue;
-            const fade = 1 - age / RIPPLE_LIFE;
-            const amp = k * fade * fade * rp.a;
-            dx += (ex / d) * amp * 7;
-            dy += (ey / d) * amp * 7 - amp * 3;
-            lift += amp * 0.75;
-          }
-          ctx.fillStyle = palette[Math.min(LEVELS - 1, level[i] + Math.round(lift * (LEVELS - 1)))];
-          ctx.fillText(digit[i] ? "1" : "0", c * CELL_W + dx, baseline(r) + dy);
+      // Flip a few digits each frame, so the field stays alive between the bands.
+      if (!still) {
+        for (let k = Math.round(cols * rows * 0.0004); k > 0; k--) {
+          const i = Math.floor(Math.random() * digit.length);
+          if (gap[i]) continue;
+          digit[i] ^= 1;
+          shown[i] = -1;
         }
       }
-      ctx.restore();
-      return true;
+
+      for (let r = 0; r < rows; r++) {
+        const s2 = rowS2[r];
+        const c2 = rowC2[r];
+        const s3 = rowS3[r];
+        const c3 = rowC3[r];
+        const d = rowD[r];
+        const thresholds = BAYER[r & 3];
+        const near = r >= r0 && r <= r1;
+        const cy = r * CELL_H + CELL_H / 2;
+        for (let c = 0; c < cols; c++) {
+          const i = r * cols + c;
+          if (gap[i]) continue;
+          const wave = colA[c] + 0.7 * (colS2[c] * c2 + colC2[c] * s2) + 0.5 * (colS3[c] * c3 + colC3[c] * s3) + 0.4 * d;
+          const sh = 0.5 + 0.5 * (seedS[i] * shimmerC + seedC[i] * shimmerS);
+          let b = smooth((wave - 0.05) / 1.6) * (0.85 + 0.15 * sh) * (0.4 + 0.6 * glow[i]);
+
+          let v = 0;
+          if (near && c >= c0 && c <= c1) {
+            const cx = c * CELL_W + CELL_W / 2;
+            if (lit) {
+              const ex = cx - px;
+              const ey = cy - py;
+              v += Math.exp(-(ex * ex + ey * ey) / core2) * weight;
+              const hx = cx - wx;
+              const hy = cy - wy;
+              const hd = hx * hx + hy * hy;
+              if (hd < halo2) {
+                const k = 1 - hd / halo2;
+                v += k * k * 0.45 * weight;
+              }
+            }
+            for (const rg of live) {
+              const ex = cx - rg.x;
+              const ey = cy - rg.y;
+              const dist = Math.sqrt(ex * ex + ey * ey);
+              const a = dist - rg.r1;
+              if (a > -band && a < band) v += Math.exp(-(a * a) / ring2) * rg.f;
+              if (rg.r2 > 0) {
+                const e = dist - rg.r2;
+                if (e > -band && e < band) v += Math.exp(-(e * e) / (1.25 * ring2)) * rg.f * 0.5;
+              }
+            }
+            if (v > 1) v = 1;
+            if (v > 0) {
+              // Light where the field is dark; where a band is already bright, carve into it a little.
+              const k = 0.6 * smooth((b - 0.2) / 0.4);
+              const up = v > b ? v : b;
+              const carve = b > v ? b - v : 0;
+              b = up + (carve - up) * k;
+            }
+          }
+
+          let level: number;
+          if (spark[i] && (v > 0.3 || 0.5 + 0.5 * (seedS[i] * blinkC + seedC[i] * blinkS) > 0.97)) level = 15;
+          else if (b > thresholds[c & 3]) level = Math.min(14, 6 + Math.round(4 * glow[i] + 5 * v));
+          else level = 1 + Math.round(1.6 * glow[i]);
+          if (level === shown[i]) continue;
+          shown[i] = level;
+          const x = c * CELL_W;
+          const y = r * CELL_H;
+          ctx.drawImage(ground, x * dpr, y * dpr, CELL_W * dpr, CELL_H * dpr, x, y, CELL_W, CELL_H);
+          buckets[level].push(i);
+        }
+      }
+      for (let level = 0; level < LEVELS; level++) {
+        const list = buckets[level];
+        if (!list.length) continue;
+        ctx.fillStyle = palette[level];
+        for (const i of list) {
+          const c = i % cols;
+          const r = (i / cols) | 0;
+          ctx.fillText(digit[i] ? "1" : "0", c * CELL_W, baseline(r));
+        }
+        list.length = 0;
+      }
     };
 
-    const loop = (now: number) => {
-      const target = now - lastMove < 1800 ? 1 : 0;
-      hover += (target - hover) * 0.08;
-      if (hover < 0.01 && target === 0) hover = 0;
-      const drew = render(now);
-      raf = drew || hover > 0 || ripples.length ? requestAnimationFrame(loop) : 0;
+    // ---- The loop: the wave always moves; the pointer and rings raise the frame rate ----
+    let raf = 0;
+    let last = 0;
+    const frame = (now: number) => {
+      raf = requestAnimationFrame(frame);
+      const active = weight > 0.004 || hasPointer || rings.length > 0;
+      if (last && now - last < (active ? FRAME_LIVE : FRAME_IDLE) - 4) return;
+      const dt = last ? Math.min(0.05, (now - last) / 1000) : 0.033;
+      last = now;
+      if (!cols) return;
+      t += DRIFT * dt;
+      const ease = Math.min(1, 7 * dt);
+      weight += ((hasPointer ? 1 : 0) - weight) * ease;
+      if (weight < 0.004 && !hasPointer) weight = 0;
+      wx += (px - wx) * ease;
+      wy += (py - wy) * ease;
+      paint(now / 1000);
     };
-    const wake = () => {
-      if (!raf && !still) raf = requestAnimationFrame(loop);
+    const start = () => {
+      if (still || raf || document.hidden) return;
+      last = 0;
+      raf = requestAnimationFrame(frame);
     };
-    const drop = (x: number, y: number, a: number, now: number) => {
-      ripples.push({ x, y, t: now, a });
-      if (ripples.length > MAX_RIPPLES) ripples.shift();
+    const stop = () => {
+      cancelAnimationFrame(raf);
+      raf = 0;
+    };
+
+    const ring = (x: number, y: number, a: number, now: number) => {
+      rings.push({ x, y, t: now / 1000, a });
+      if (rings.length > MAX_RINGS) rings.shift();
       spawnX = x;
       spawnY = y;
       spawnT = now;
     };
-
     const onMove = (e: PointerEvent) => {
       if (e.pointerType !== "mouse") return; // touch moves are scrolls
       const now = performance.now();
+      if (!hasPointer) {
+        wx = e.clientX;
+        wy = e.clientY;
+      }
+      hasPointer = true;
       px = e.clientX;
       py = e.clientY;
-      lastMove = now;
-      const moved = Math.hypot(px - spawnX, py - spawnY);
-      if (moved > 90 || (moved > 8 && now - spawnT > 280)) drop(px, py, 1, now);
-      wake();
+      if (Math.hypot(px - spawnX, py - spawnY) >= 28 && now - spawnT >= 100) ring(px, py, 1, now);
     };
-    const onDown = (e: PointerEvent) => {
-      drop(e.clientX, e.clientY, 1.4, performance.now());
-      wake();
-    };
+    const onDown = (e: PointerEvent) => ring(e.clientX, e.clientY, 1.4, performance.now());
     const onLeave = () => {
-      lastMove = -1e9;
+      hasPointer = false;
     };
 
     build();
@@ -265,32 +381,6 @@ export function BinaryField() {
         lastH = h;
       }, 150);
     };
-
-    let timer = 0;
-    const tick = () => {
-      if (!cols) return;
-      for (let n = 0; n < 45; n++) {
-        const i = Math.floor(Math.random() * level.length);
-        if (level[i] < 0 || inRect(i, lastRect)) continue;
-        const b = Math.min(1, base[i] * (0.6 + Math.random() * 0.9));
-        level[i] = Math.round(b * BASE_MAX);
-        if (Math.random() < 0.5) digit[i] ^= 1;
-        const c = i % cols;
-        const r = (i / cols) | 0;
-        const x = c * CELL_W;
-        const y = r * CELL_H;
-        ctx.drawImage(ground, x * dpr, y * dpr, CELL_W * dpr, CELL_H * dpr, x, y, CELL_W, CELL_H);
-        ctx.fillStyle = palette[level[i]];
-        ctx.fillText(digit[i] ? "1" : "0", x, baseline(r));
-      }
-    };
-    const start = () => {
-      if (!still && !timer && !document.hidden) timer = window.setInterval(tick, 110);
-    };
-    const stop = () => {
-      window.clearInterval(timer);
-      timer = 0;
-    };
     const onVis = () => (document.hidden ? stop() : start());
 
     window.addEventListener("resize", onResize);
@@ -298,18 +388,19 @@ export function BinaryField() {
     if (!still) {
       window.addEventListener("pointermove", onMove, { passive: true });
       window.addEventListener("pointerdown", onDown, { passive: true });
+      window.addEventListener("blur", onLeave);
       document.documentElement.addEventListener("pointerleave", onLeave);
     }
     start();
 
     return () => {
       stop();
-      cancelAnimationFrame(raf);
       window.clearTimeout(resizeTimer);
       window.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("blur", onLeave);
       document.documentElement.removeEventListener("pointerleave", onLeave);
     };
   }, []);
