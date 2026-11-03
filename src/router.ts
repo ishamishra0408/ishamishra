@@ -10,6 +10,7 @@ export type Route =
   | { name: "design"; slug: string }
   | { name: "resume" }
   | { name: "writing" }
+  | { name: "blog" }
   | { name: "notfound" };
 
 export function normalize(path: string): string {
@@ -22,6 +23,7 @@ export function parse(path: string): Route {
   if (p === "/") return { name: "home" };
   if (p === "/resume/") return { name: "resume" };
   if (p === paths.writing) return { name: "writing" };
+  if (p === paths.blog) return { name: "blog" };
   const m = p.match(/^\/work\/([a-z0-9-]+)\/$/);
   if (m && projects.some((x) => x.slug === m[1])) return { name: "project", slug: m[1] };
   const d = p.match(/^\/work\/([a-z0-9-]+)\/design\/$/);
@@ -33,6 +35,7 @@ export const paths = {
   home: "/",
   resume: "/resume/",
   writing: "/writing/how-i-build-agents/",
+  blog: "/blog/",
   project: (slug: string) => `/work/${slug}/`,
   design: (slug: string) => `/work/${slug}/design/`,
   section: (id: string) => `/#${id}`,
@@ -43,6 +46,7 @@ export function allPaths(): string[] {
   return [
     paths.home,
     paths.resume,
+    paths.blog,
     paths.writing,
     ...projects.map((p) => paths.project(p.slug)),
     ...designs.map((d) => paths.design(d.slug)),

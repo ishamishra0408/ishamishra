@@ -1,5 +1,6 @@
 import { Component, useEffect, useState, type ReactNode } from "react";
 import { BinaryField } from "./components/BinaryField";
+import { BlogPage } from "./components/BlogPage";
 import { CommandPalette } from "./components/CommandPalette";
 import { DesignPage } from "./components/DesignPage";
 import { BookingSheet } from "./components/Contact";
@@ -32,6 +33,7 @@ function Page() {
   if (route.name === "design") return <DesignPage key={route.slug} slug={route.slug} />;
   if (route.name === "resume") return <ResumePage />;
   if (route.name === "writing") return <WritingPage />;
+  if (route.name === "blog") return <BlogPage />;
   if (route.name === "notfound") return <NotFound />;
   return <Home />;
 }
@@ -61,7 +63,7 @@ function Nav() {
               {s.label}
             </Link>
           ))}
-          <Link to={paths.writing}>Writing</Link>
+          <Link to={paths.blog}>Engineering Blog</Link>
           <Link to={paths.resume}>Résumé</Link>
         </nav>
         <div className="nav-actions">
@@ -84,8 +86,8 @@ function Nav() {
                 {s.label}
               </Link>
             ))}
-            <Link to={paths.writing} onClick={() => setMenu(false)}>
-              Writing
+            <Link to={paths.blog} onClick={() => setMenu(false)}>
+              Engineering Blog
             </Link>
             <Link to={paths.resume} onClick={() => setMenu(false)}>
               Résumé

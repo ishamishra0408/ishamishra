@@ -160,7 +160,7 @@ export function DesignPage({ slug }: { slug: string }) {
                 {row.side && <span className="ds-side">{row.side}</span>}
               </div>
             ))}
-            <figcaption className="muted small">Every move, from a person, an agent or a sync, takes the same path down.</figcaption>
+            <figcaption className="muted small">{d.caption}</figcaption>
           </figure>
           <h3 className="label ds-walk-h">{d.walkthrough.title}</h3>
           <ol className="ds-list ds-walk">

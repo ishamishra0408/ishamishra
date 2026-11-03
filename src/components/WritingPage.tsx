@@ -15,7 +15,7 @@ export function WritingPage() {
 
   const back = () => {
     if ((history.state as { internal?: boolean } | null)?.internal) history.back();
-    else navigate("/#contact");
+    else navigate(paths.blog);
   };
 
   return (
@@ -29,7 +29,7 @@ export function WritingPage() {
         </button>
         <header className="pj-head">
           <p className="pj-meta">
-            <span className="pill">Writing</span>
+            <span className="pill">Engineering Blog</span>
             <time dateTime={POST.date}>{POST.dateLabel}</time>
           </p>
           <h1 className="pj-title">

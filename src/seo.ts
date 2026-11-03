@@ -82,6 +82,23 @@ export function routeMeta(route: Route): Meta {
       },
     };
   }
+  if (route.name === "blog") {
+    return {
+      path: paths.blog,
+      title: `Engineering Blog · ${profile.name}`,
+      description: `How ${profile.name}'s projects are built: system designs in Hello Interview's format (requirements, core entities, API, high-level design, deep dives), and the calls behind them.`,
+      image: abs("/og/home.jpg"),
+      imageAlt: `${profile.name}: Engineering Blog`,
+      type: "website",
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "Blog",
+        name: `Engineering Blog · ${profile.name}`,
+        url: abs(paths.blog),
+        author: { "@type": "Person", "@id": PERSON_ID, name: profile.name },
+      },
+    };
+  }
   if (route.name === "writing") {
     return {
       path: paths.writing,
@@ -191,13 +208,11 @@ export function llmsTxt(): string {
     "## Projects",
     ...projects.map(line),
     "",
-    "## System design",
+    `## [Engineering blog](${abs(paths.blog)})`,
     ...designs.map((d) => {
       const p = projects.find((x) => x.slug === d.slug)!;
       return `- [${p.name}: how it's built](${abs(paths.design(d.slug))}): ${d.intro}`;
     }),
-    "",
-    "## Writing",
     `- [${POST.title}](${abs(paths.writing)}): ${POST.description}`,
     "",
     "## Links",

@@ -1,6 +1,7 @@
 // System design write-ups, one per project, in Hello Interview's order: requirements, core
 // entities, API, high-level design, deep dives. Every line comes from that repo's README, its
-// decision logs (docs/decision-log.md, packing.md) or its code; if those change, change it here.
+// decision logs (tira: docs/decision-log.md, packing.md; DebugAssist: the pipeline's DECISIONS.md and
+// design/system-architecture-v0.md, kept outside the repo) or its code; if those change, change it here.
 // The voice is neutral; `decidedBy` marks whose calls the deep dives are.
 
 export type Design = {
@@ -14,6 +15,7 @@ export type Design = {
   api: { title: string; endpoint?: string; calls: { sig: string; does?: string }[]; note?: string }[];
   /** The diagram, top to bottom: each row's boxes, and an optional box beside the row. */
   diagram: { boxes: string[]; side?: string; store?: boolean }[];
+  caption: string;
   walkthrough: { title: string; steps: string[] };
   deepDives: { q: string; considered?: string[]; chose: string; tradeoff: string }[];
   next: string[];
@@ -92,6 +94,7 @@ export const designs: Design[] = [
       { boxes: ["Fold: replay the log"] },
       { boxes: ["Board, task tree, what's next"] },
     ],
+    caption: "Every move, from a person, an agent or a sync, takes the same path down.",
     walkthrough: {
       title: "An agent completes a task",
       steps: [
@@ -173,6 +176,151 @@ export const designs: Design[] = [
       { label: "Decision log", url: "https://github.com/devpath56/tira/blob/main/docs/decision-log.md" },
       { label: "Build, buy or clone", url: "https://github.com/devpath56/tira/blob/main/packing.md" },
       { label: "The long version", url: "https://github.com/devpath56/tira/blob/main/docs/ENGINEERING.md" },
+    ],
+  },
+  {
+    slug: "debugassist",
+    intro: "An agent that takes a GitHub bug report to a fix proven by two tests, where code, not the model, decides every step.",
+    decidedBy: "Isha",
+    functional: [
+      "Read a GitHub issue and decide whether it's a real bug, and how sure that is.",
+      "Write a test that fails on the latest main for the issue's reason, before any fix.",
+      "Name the cause as real source lines, and write the smallest fix that turns that test green with every affected suite still passing.",
+      "Confirm the fix with a second test written without seeing it.",
+      "Explain how the bug shipped, as conditions, never people, and add one test that guards the whole class of bug.",
+      "Pause for a person's OK on the exact pull request text.",
+    ],
+    outOfScope: [
+      "Posting to GitHub: the pipeline can only read. Publishing is the person's step.",
+      "A fix for a bug it couldn't make fail: the run stops instead.",
+      "Many issues at once: one run at a time.",
+    ],
+    nonFunctional: [
+      { name: "Evidence over the model's word", text: "A fix counts only when tests that failed on main pass with it." },
+      { name: "Crash-safe", text: "Every step is checkpointed; a crash resumes where it stopped, and nothing is counted twice." },
+      { name: "Spend can't overrun", text: "Each call's worst case is reserved before the call, and each person has a monthly cap." },
+      { name: "Contained", text: "AI-written tests run with the network off and no secrets inside." },
+      { name: "Least privilege", text: "Read-only GitHub, and each person sees only their own runs." },
+    ],
+    entities: [
+      { name: "Run", text: "One issue, from intake to the person's OK: its steps, why it stopped, who started it, and the commit of main it branched from." },
+      { name: "Context pack", text: "What every later step reads: comments with names removed, linked pull requests, errors, the five best-matching files, recent changes. Cut to size and locked by SHA-256." },
+      { name: "Reproduction attempt", text: "A test on one rung of the ladder (unit, recorded stream, the reporter's repro), ending red, green or error." },
+      { name: "Fix", text: "Exact search-and-replace edits to source files, never tests, with the two tests that judged it." },
+      { name: "Condition", text: "What let the bug ship, named and embedded, to find past bugs of the same kind." },
+      { name: "Guard", text: "One parametrised test over every way the bug class can happen." },
+      { name: "Meter and call", text: "Dollars and sandbox seconds reserved before use and settled after, with one row per model call." },
+      { name: "Approval", text: "The person's go-word, bound to a fingerprint of the exact pull request text." },
+    ],
+    api: [
+      {
+        title: "The web app, signed in with GitHub",
+        endpoint: "Allow-listed accounts only; each sees only their own runs",
+        calls: [
+          { sig: "POST /api/start (issue, focus?, look_in?, test_in?, ai)", does: "starts a run, if it fits the person's monthly cap" },
+          { sig: "POST /api/install (run, yes | no)", does: "add a missing package to the test machine?" },
+          { sig: "POST /api/answer (run, advisor | run)", does: "an advisor disagreed: whose plan to follow" },
+          { sig: "POST /api/decide (run, approve | reject, fingerprint)", does: "the person's OK on the exact text" },
+          { sig: "POST /api/connect (repo)", does: "set up a repo: its install, test machine and suites, proven offline" },
+          { sig: "POST /hooks/github", does: "signed webhook: the debug-assist label queues a run" },
+        ],
+      },
+      {
+        title: "The same pipeline, from a terminal",
+        calls: [
+          { sig: "debug-assist run <issue-url>", does: "preflight first; refuses with every failing check listed" },
+          { sig: "debug-assist resume <run-id>", does: "continues after the last finished step" },
+          { sig: "debug-assist approve <run-id>", does: "prints the fingerprint it approves" },
+          { sig: "debug-assist events <run-id>", does: "every model call, sandbox command and decision" },
+        ],
+        note: "Inside, one function is the only door to a generation model, and a test fails if any other code calls one.",
+      },
+    ],
+    diagram: [
+      { boxes: ["A GitHub issue, pasted or labelled", "A person, signed in with GitHub"] },
+      { boxes: ["Pipeline: 10 fixed steps, each checkpointed"], side: "MongoDB: run state, spend, events" },
+      { boxes: ["Laya decides: a real bug?", "Claude Opus writes: tests, cause, fix"], side: "Every call reserved against the cap first" },
+      { boxes: ["Sandbox runs every test: network off, no secrets"], store: true },
+      { boxes: ["The person's OK on the exact pull request text"] },
+      { boxes: ["Pull request ready: the person publishes it"] },
+    ],
+    caption: "The models write; the sandbox's exit codes decide.",
+    walkthrough: {
+      title: "From an issue to the person's OK",
+      steps: [
+        "Laya, a triage model fine-tuned for this, decides whether the issue is a real bug. Below 0.6 confidence, the run stops for a person.",
+        "Gather context, with no AI: comments without names, linked pull requests, errors and the best-matching files, locked by SHA-256. The run's copy of the code moves to main's newest commit.",
+        "Climb the ladder (a unit test, then a recorded stream, then the reporter's own repro) until a test fails for the issue's reason. Nothing in 4 tries: the run stops.",
+        "Claude names the cause as real lines and writes search-and-replace edits. Code applies them to source only; the failing test and every affected suite must pass, or the edits are reverted and retried, up to 3 times.",
+        "A second test, written without seeing the fix, must fail on main and pass with it.",
+        "The report on why it shipped is drawn from the line's GitHub history, and the guard covers the whole class.",
+        "The run pauses for the person's OK on the exact pull request text, then saves it for them to publish.",
+      ],
+    },
+    deepDives: [
+      {
+        q: "How can a fix a model wrote be trusted?",
+        considered: ["One judge: the test that reproduced the bug. A fix that passed its one judge failed all 3 reference tests from the by-hand run."],
+        chose: "Two judges. The reproducing test, plus a second test written without seeing the fix, which must fail on main and pass with it, while the affected packages' suites stay green. The fixer may call a test flawed, never edit it. A fix written after the fixer saw the second test fail counts as one judge.",
+        tradeoff: "More model calls and sandbox time per fix, and both judges come from one model, so they aren't fully independent: accepted as a named gap. Against the maintainers' own fixes, 2 of 2 had the right cause and a fix too narrow; their tests caught it.",
+      },
+      {
+        q: "How is a bug reproduced before anything is fixed?",
+        considered: ["Fix after the attempt cap even without a failing test, as Uber's design does. Faster, but a fix for a bug nobody saw fail proves nothing."],
+        chose: "A ladder, climbed before any fix: a unit test, then the real code path against a recorded stream, then the reporter's own repro. The first test that fails for the issue's reason becomes the judge; a crash or a wrong-reason failure doesn't count. A failure on made-up data is confirmed on a recorded stream. After 4 tries, the run stops: NEVER REPRODUCED.",
+        tradeoff: "Some real bugs end without a fix. A named stop beats an unproven fix.",
+      },
+      {
+        q: "How does each run test today's code without a slow setup?",
+        considered: ["Pin every run to one prepared commit. Bugs fixed since still \"reproduced\", and fixes were written against old code."],
+        chose: "Each run moves its copy of the code to main's newest commit. The test machine is rebuilt only when the lockfile changed; otherwise only the changed packages are built. The page says which commit the run branched from, and when.",
+        tradeoff: "A lockfile change rebuilds the test machine, which takes minutes. Installing every package up front was not chosen.",
+      },
+      {
+        q: "How does a crash lose neither the run nor the money?",
+        considered: [
+          "Temporal, a workflow engine. Durable, but a server that could be down on demo day and a core rewrite five days out.",
+          "Spend kept in the run's state. LangGraph saves state only when a step finishes, so a crash mid-step forgot its calls, and the resumed run under-counted.",
+        ],
+        chose: "LangGraph with the MongoDB checkpointer: a run resumes after its last finished step (proven with kill -9), and the wait for the person's OK survives restarts. Spend lives apart in MongoDB: each call's worst case is reserved in one atomic update before the call, then settled, in integer micro-dollars.",
+        tradeoff: "A crash between reserve and settle leaves money counted that was never spent: it fails closed, never open. Temporal comes back if it ever runs many issues at once.",
+      },
+      {
+        q: "Which model does what?",
+        considered: ["A cheaper open-weight coder for every run (Qwen3-Coder-Next, about $0.20 a fix). It needed 2–4 tries, wrote tests that couldn't pass, and its one-judge fix failed the reference tests."],
+        chose: "Three roles. Laya, a small calibrated model, answers typed questions (is it a bug, what kind) in milliseconds; fine-tuned on issue data, it went from 174 to 215 of 232 right, under an adoption rule fixed before training, and is used only for triage. Claude Opus writes the tests, cause and fix. An embedding model finds past bugs of the same condition.",
+        tradeoff: "Laya runs only on Apple chips, so the hosted app reaches it on a Mac through a Tailscale tunnel; while that Mac sleeps, triage can't answer. A run on Opus costs cents: $0.41 for vercel/ai #22543.",
+      },
+      {
+        q: "How does AI-written code run safely?",
+        considered: ["Docker on the server. Render's free plan can't run it."],
+        chose: "Every test runs in a sandbox with the network off and no secrets inside: Docker on a Mac, E2B when hosted. An install gets the network for that one command. Every command runs under bash -o pipefail, after a run with 14 failing tests exited 0 through a pipe. A missing package is added only on the person's yes.",
+        tradeoff: "The check of older code (the back-test) still runs only on the Mac; hosted runs report it as not available.",
+      },
+      {
+        q: "How do outside advisors help without steering the run?",
+        considered: ["Advice only, never changing the run (the first ruling). A disagreement was shown, but nothing could act on it."],
+        chose: "Advisor seats on the Domain Expertise MCP server review triage, the cause, the report and the guard. When one disagrees, the run pauses and the person picks whose plan it follows. Only what was sent to the advisor can come back into a prompt: the repo's own files and the report's own sentences. The server was reviewed before anything connected.",
+        tradeoff: "A disagreement waits for a person. An advisor that can't be reached costs the advice, never the run.",
+      },
+      {
+        q: "How does nothing reach GitHub without a person?",
+        considered: ["Let the pipeline post the pull request after approval. One less step, but a write credential on an AI pipeline."],
+        chose: "The pipeline holds a read-only GitHub token, so it can't post. The OK binds to a SHA-256 fingerprint of the exact pull request text; any other text is refused, and a second tap confirms. The person then publishes it with their own login.",
+        tradeoff: "One more step for the person, on purpose.",
+      },
+    ],
+    next: [
+      "Run the maintainers' fix tests against every fix before the person's OK, and show the result.",
+      "A replay benchmark: closed issues with merged fixes, run from the commit before the merge with the fix hidden, scored on cause, the maintainers' tests and size.",
+      "Temporal, once it runs many issues at once.",
+    ],
+    sources: [
+      { label: "README", url: "https://github.com/ishamishra0408/DebugAssist#readme" },
+      { label: "Operations", url: "https://github.com/ishamishra0408/DebugAssist/blob/main/docs/OPERATIONS.md" },
+      { label: "Decision log", url: "https://github.com/ishamishra0408/DebugAssist/blob/main/docs/DECISIONS.md" },
+      { label: "Results", url: "https://github.com/ishamishra0408/DebugAssist/blob/main/docs/RESULTS.md" },
+      { label: "Hosting", url: "https://github.com/ishamishra0408/DebugAssist/blob/main/deploy/DEPLOY.md" },
     ],
   },
 ];

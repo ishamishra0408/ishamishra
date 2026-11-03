@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { education, profile, roles } from "../data/profile";
 import { projects, type Project } from "../data/projects";
-import { POST, views } from "../data/views";
+import { designs } from "../data/designs";
 import { paths } from "../router";
 import { useUI } from "../ui";
 import { Link } from "./Link";
@@ -284,15 +284,15 @@ export function Home() {
         {/* The close: two tiles side by side, in the same style as the work tiles. */}
         <section className="sec frame closing" id="contact" aria-label="How I think, and how to reach me">
           <Tile as="div" lean={0.4} className="role close-tile tile-in" style={{ "--i": 0 } as CSSProperties}>
-            <p className="label">Writing</p>
-            <h2 id="th-h">{POST.title}</h2>
+            <p className="label">Engineering Blog</p>
+            <h2 id="th-h">How the projects are built</h2>
             <p className="muted">
-              {COUNT[views.length] ?? views.length} decisions I make the same way every time, and the projects where
-              each one shows up.
+              System designs in Hello Interview's format: requirements, the design, and the calls behind it.{" "}
+              {COUNT[designs.length] ?? designs.length} so far.
             </p>
             <div className="actions">
-              <Link className="btn-w" to={paths.writing}>
-                Read it <Arrow />
+              <Link className="btn-w" to={paths.blog}>
+                Read the blog <Arrow />
               </Link>
               <button className="btn-g" onClick={() => setQuiz(true)}>
                 Take the quiz

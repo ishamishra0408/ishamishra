@@ -4,8 +4,9 @@ Personal site for a senior software engineer building AI agents, structured from
 (see `reports/Engineer portfolio website best practices.md`):
 
 - **Home:** hero with one line, current status and two buttons → a scrolling strip of employer logos (`public/logos`) →
-  experience (Now strip, four role tiles, education) → 5 project cards with tech chips → Writing and contact tiles.
-- **Writing** at `/writing/how-i-build-agents/`: the six calls from `src/data/views.ts`, each linked to the project
+  experience (Now strip, four role tiles, education) → 5 project cards with tech chips → Engineering Blog and contact tiles.
+- **Engineering Blog** at `/blog/`: each project's system design (`/work/<slug>/design/`, from `src/data/designs.ts`, in Hello Interview's order), then the essay.
+- **The essay** at `/writing/how-i-build-agents/`: the six calls from `src/data/views.ts`, each linked to the project
   where it shows up, plus the quiz. **Drafted from the READMEs; rewrite it in your own words.**
 - **One page per project** at `/work/<slug>/`: a Back button (to the exact spot you left), summary, links, three
   results, caveat, screenshot, live demo (for 3 projects).
