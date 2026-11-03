@@ -60,7 +60,7 @@ environment variables. The panel also links to the page in a new tab and offers 
 ## Visit stats (optional)
 
 Anonymous visit counts through [Umami](https://cloud.umami.is): no cookies, so no consent banner, and nothing that
-identifies a person. Create a free account, add the site, and set its website ID as `VITE_UMAMI_ID` in the host's
+identifies a person. Create a free account, add the site, and set its website ID (or Umami's whole tracking snippet) as `VITE_UMAMI_ID` in the host's
 environment variables (or `.env`). Only production builds load the tracker, and it counts the site's own address only.
 
 | What | Where in Umami |

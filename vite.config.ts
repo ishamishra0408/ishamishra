@@ -44,12 +44,21 @@ function umami(id: string, site: string): Plugin {
   };
 }
 
+// Umami's website ID from VITE_UMAMI_ID. Pasting Umami's whole tracking snippet works too: the ID is
+// picked out of it.
+function umamiId(mode: string): string {
+  const raw = loadEnv(mode, process.cwd(), "VITE_").VITE_UMAMI_ID ?? "";
+  const id = raw.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0] ?? "";
+  if (raw.trim() && !id) console.warn("VITE_UMAMI_ID holds no Umami website ID; visit stats stay off.");
+  return id;
+}
+
 export default defineConfig(({ mode }) => {
   const site = siteUrl();
-  const umamiId = loadEnv(mode, process.cwd(), "VITE_").VITE_UMAMI_ID?.trim() ?? "";
+  const stats = umamiId(mode);
   return {
-    plugins: [react(), umami(umamiId, site)],
+    plugins: [react(), umami(stats, site)],
     server: { port: 5173 },
-    define: { __SITE_URL__: JSON.stringify(site) },
+    define: { __SITE_URL__: JSON.stringify(site), __UMAMI_ID__: JSON.stringify(stats) },
   };
 });

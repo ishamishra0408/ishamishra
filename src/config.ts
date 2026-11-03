@@ -38,5 +38,7 @@ export function embedUrl(url: string): string {
 
 export const RESUME_PDF = "/isha-mishra-resume.pdf";
 
-// Umami website ID for visit stats (see vite.config.ts and src/analytics.ts). Empty means no tracking.
-export const UMAMI_ID: string = (import.meta.env.VITE_UMAMI_ID as string | undefined)?.trim() || "";
+// Umami website ID for visit stats, read from VITE_UMAMI_ID at build time (see vite.config.ts and
+// src/analytics.ts). Empty means no tracking.
+declare const __UMAMI_ID__: string;
+export const UMAMI_ID: string = __UMAMI_ID__;
