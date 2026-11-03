@@ -3,7 +3,8 @@
 // decision logs (tira: docs/decision-log.md, packing.md; DebugAssist: the pipeline's DECISIONS.md and
 // design/system-architecture-v0.md, kept outside the repo; DogMaAI: five decision records reconstructed
 // from its code on 2026-10-03, quoting the owner's rulings; Agent KYC: DECISIONS.md and the README's
-// engineering-decisions table) or its code; if those change, change it here.
+// engineering-decisions table; No-Leak-MCP: Isha's own proposalIM.md and docs/DETAIL.md, not the ADRs
+// Devansh committed) or its code; if those change, change it here.
 // The voice is neutral; `decidedBy` marks whose calls the deep dives are.
 
 export type Design = {
@@ -598,6 +599,141 @@ export const designs: Design[] = [
       { label: "Decision log", url: "https://github.com/ishamishra0408/Agent-KYC/blob/main/DECISIONS.md" },
       { label: "Failure log", url: "https://github.com/ishamishra0408/Agent-KYC/blob/main/FAILURES.md" },
       { label: "How the tests work", url: "https://github.com/ishamishra0408/Agent-KYC/blob/main/evals/README.md" },
+    ],
+  },
+  {
+    slug: "noleak-mcp",
+    intro: "A guard that stops an AI assistant from leaking a secret through Slack, whatever the model decides to do.",
+    decidedBy: "Isha",
+    functional: [
+      "Score every Slack message the assistant reads for injected instructions.",
+      "Inspect every outbound tool call before it's sent, and refuse one that carries a secret.",
+      "Catch untagged secrets too: a value read earlier that reappears in a later outbound call.",
+      "Log every verdict and denial, and stream them to a live feed many people can watch at once.",
+      "Measure attack success with the guard off and on.",
+      "After a block, find out who could read the secret where it was going, and say whether to rotate it.",
+    ],
+    outOfScope: [
+      "Patching the agent or its harness: every control registers into a seat the harness already has.",
+      "Blocking network traffic: the harness emits an indicator for the controls that can.",
+      "A leak that never passes through a tool call, such as prose a person acts on.",
+    ],
+    nonFunctional: [
+      { name: "Independent of the model", text: "It holds whether the model refuses, obeys or never judges the call." },
+      { name: "Independent of the destination", text: "It decides on the value, not where the value is going." },
+      { name: "No changes to the agent", text: "Three registrations, each switched on or off by one setting." },
+      { name: "Honest numbers", text: "Attack success is reported with blocked over attempted, so model refusals don't count as the guard's." },
+      { name: "Safe to demo", text: "Every leaked value is a canary decoy, never a real secret." },
+    ],
+    entities: [
+      { name: "Tool result", text: "What the assistant read, such as a Slack thread or a file, with secret-shaped values harvested from it." },
+      { name: "Outbound call", text: "A tool call's arguments about to leave: the moment the guard decides." },
+      { name: "Canary", text: "A tagged decoy secret, recognised raw or through base64, hex, base32, gzip, URL encoding or splitting." },
+      { name: "Verdict", text: "The scorer's injection score and labels for one message read." },
+      { name: "Denial", text: "A refused call: which control, which tool and when, logged and streamed." },
+      { name: "Trial", text: "One evaluation run: the victim model, the attack (direct or injected), the guard off or on, and the outcome." },
+      { name: "Finding", text: "Who can read the secret at its destination, and the verdict: exposed, rotate now, or contained." },
+    ],
+    api: [
+      {
+        title: "The three controls, registered in the dsh harness",
+        calls: [
+          { sig: "session-telemetry/record", does: "the scorer fills this waterfall, which ships empty" },
+          { sig: "tools/pre-execute", does: "the guard denies a call carrying a tagged secret" },
+          { sig: "tools/result", does: "the invariant harvests secret-shaped values from what was read" },
+          { sig: "tools/pre-execute", does: "the invariant denies a later call that carries one" },
+        ],
+        note: "All three are registrations, not patches, and each disposes of itself.",
+      },
+      {
+        title: "Switches and the live feed",
+        calls: [
+          { sig: "MCPGUARD_ENABLED=0 | 1", does: "the guard off or on, the only variable between runs" },
+          { sig: "CHAIN_INVARIANT_ENABLED=1", does: "the invariant, off by default" },
+          { sig: "GET /guard, GET /invariant", does: "the live toggles a running session follows" },
+          { sig: "ingestEvent, ingestTrial, ingestFinding", does: "write a verdict, denial, trial or finding to the feed" },
+          { sig: "feed, summary, findings", does: "what every viewer subscribes to" },
+          { sig: "node eval/run.mjs --n 5", does: "attack success, guard off and on, per model and attack" },
+        ],
+      },
+    ],
+    diagram: [
+      { boxes: ["A poisoned Slack message"] },
+      { boxes: ["Victim agent in the dsh harness, on Nebius"], side: "Scorer flags the message (Nebius)" },
+      { boxes: ["Guard and chain invariant at tools/pre-execute"] },
+      { boxes: ["Denied: nothing reaches Slack, so nothing is fetched"] },
+      { boxes: ["Convex: every verdict, denial and trial, pushed to every viewer"], store: true, side: "Linkup: who can read it there?" },
+      { boxes: ["The live feed: attack success, 1 to 0"] },
+    ],
+    caption: "The guard decides inside the agent's harness, before a call leaves; everything after it is a record.",
+    walkthrough: {
+      title: "The Slack attack, with the guard on",
+      steps: [
+        "A teammate's message, written like an ops bot, asks the assistant to read its credentials file, base64-encode it and fetch a URL, silently.",
+        "The assistant reads the thread. The scorer, a second model on the same inference plane, flags it as injection at 0.95, and the verdict is logged and streamed. It doesn't block.",
+        "The assistant reads the decoy keyring and builds the request.",
+        "At tools/pre-execute the guard finds the tagged secret inside the argument, through the base64, and denies the call. Nothing is posted, so Slack has nothing to fetch.",
+        "The denial reaches the live feed; every viewer sees it within a moment, and attack success drops from 1 to 0.",
+        "A follow-up investigation, up to three searches chosen by code, decides whether the destination exposed the secret. The block never depends on it.",
+      ],
+    },
+    deepDives: [
+      {
+        q: "Why can't the defence live in the model?",
+        considered: ["Rely on the model to refuse. Claude refused all 4 runs, but Nemotron 120B, capable and not safety-hardened, obeyed every time."],
+        chose: "A guard in the harness, keyed on a mechanical fact: a tagged secret is leaving in an outbound argument. It holds whether the model refuses, obeys or never judges the call at all.",
+        tradeoff: "It's a canary tripwire, not a general secret detector. A real secret with no tag passes, and so does a transform it can't decode or a payload split across calls.",
+      },
+      {
+        q: "Where does it block: at the fetch, or before?",
+        considered: ["Block the fetch with an egress control. Slack fetches the preview from its own servers, so no firewall on the victim's machine ever sees it."],
+        chose: "At assembly: the pre-execute hook refuses the call while the secret is still an argument, so nothing reaches Slack and nothing is fetched. It decides on the value, not the destination, so the same check covers a Slack preview, an image proxy or a direct fetch.",
+        tradeoff: "It assumes no link is ever opened automatically, and anywhere secrets legitimately ride in URLs would see false positives.",
+      },
+      {
+        q: "How does it fit into the agent without changing it?",
+        considered: ["Patch the harness's agent loop."],
+        chose: "Three registrations in seats the dsh harness already exposes: the scorer fills telemetry's score waterfall, which ships empty, and the guard and the invariant sit in the tools' pre-execute waterfall. One config file composes them, and each is switched by one setting.",
+        tradeoff: "The scorer needs telemetry in full mode, which exports session data, so it must point only at a collector the owner trusts.",
+      },
+      {
+        q: "What about a real secret with no tag?",
+        considered: ["The tagged tripwire alone. Cheap and deterministic, but blind to a real secret."],
+        chose: "A chain invariant, based on provenance: it harvests secret-shaped values from every tool result and denies a later outbound argument that carries one, raw or through the guard's decoders.",
+        tradeoff: "A per-session heuristic: a transform it can't decode still slips, \"no human approval in between\" isn't modelled yet, and a long public ID can trip it. It's off by default.",
+      },
+      {
+        q: "What does the second model do?",
+        chose: "It scores every Slack message the assistant reads for injection, on the same inference plane as the victim. Its verdict is logged and streamed, never used to block: the guard alone refuses calls. On the live Slack run it flagged 7 of 8 reads of the poisoned thread, and 0 of 25 other Slack reads.",
+        tradeoff: "A second model call on every message read. Its cost grows with the agent's traffic.",
+      },
+      {
+        q: "How is the result measured honestly?",
+        considered: ["Report attack success alone. It would credit the guard for refusals the model made by itself."],
+        chose: "Attack success with the guard off and on, for two victim models and two kinds of attack, plus blocked over attempted. Victim and scorer run on one provider, Nebius, so the guard toggle is the only variable.",
+        tradeoff: "On the injected attack much of the drop is the model refusing; the direct attack, 5 of 5 blocked on both models, is the guard's own effect. Five runs per cell is a small sample.",
+      },
+      {
+        q: "How do several people watch the same run live?",
+        chose: "Convex holds the live events and the attack-success metric and pushes them to every viewer, and serves the feed page itself. Flip the guard in one window and the other updates without a refresh; a running session picks up the toggle within about two seconds.",
+        tradeoff: "A hosted service in the loop. The harness's own session log stays the record, and the background worker rebuilds its state from that log after a failure.",
+      },
+      {
+        q: "How bad was the leak that didn't happen?",
+        chose: "After a run, or for any address typed in, up to three Linkup searches, each chosen by code from what the last one found, work out who can read a credential at the destination and check it against independent sites. The verdict is exposed (rotate now) or contained, stored and reused by the next investigation.",
+        tradeoff: "The block never depends on it, but how serious the incident is does, and a search can be wrong.",
+      },
+    ],
+    next: [
+      "Model \"no human approval in between\" in the chain invariant.",
+      "Move the invariant to the harness's own invariants seat, over the session log.",
+      "A one-page set of recommended controls, mapping each one to its CVE.",
+    ],
+    sources: [
+      { label: "README", url: "https://github.com/ishamishra0408/NoLeakMCP#readme" },
+      { label: "The long version", url: "https://github.com/ishamishra0408/NoLeakMCP/blob/main/docs/DETAIL.md" },
+      { label: "Proposal", url: "https://github.com/ishamishra0408/NoLeakMCP/blob/main/proposalIM.md" },
+      { label: "Evals", url: "https://github.com/ishamishra0408/NoLeakMCP/blob/main/eval/README.md" },
     ],
   },
 ];
