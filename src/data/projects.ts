@@ -41,7 +41,7 @@ export const projects: Project[] = [
     problem: "Devansh runs a software factory where AI agents do the building. Tracking their work became a second job, and twice it went wrong: a quiet session was assumed stopped while it was still running, and work was marked done after skipping every check.",
     how: ["Every change is one event in a Postgres log that refuses edits", "The board is recomputed from the log on every request", "Done without proof is refused, and the refusal is logged", "Agents work the board through MCP"],
     results: [
-      { value: "1,115 / 1,115", label: "deliberately planted bugs caught by its tests" },
+      { value: "1,115 / 1,115", label: "planted bugs caught" },
       { value: "542", label: "tests pass on Postgres, 0 fail" },
       { value: "2 / 2", label: "replayed incidents refused" },
     ],
@@ -71,7 +71,7 @@ export const projects: Project[] = [
     problem: "AI fixers stop at a patch that passes the reporter's example. Too narrow, and nobody learns why it shipped.",
     how: ["Reproduce with a failing test", "Fix, confirmed by a second blind test", "Explain the conditions that let it ship", "Wait for your OK"],
     results: [
-      { value: "2 / 2", label: "real bugs traced to the right cause; fixes still too narrow" },
+      { value: "2 / 2", label: "bugs traced to the right lines" },
       { value: "$0.41", label: "one run (vercel/ai#22543)" },
       { value: "Off", label: "network during tests" },
     ],
@@ -97,7 +97,7 @@ export const projects: Project[] = [
     problem: "You can't see how your dog copes alone, or what helps.",
     how: ["Liquid AI describes the dog every 12 s", "Calm sounds through the camera speaker", "A weekly PetAnalytics view", "Private phone access via Tailscale"],
     results: [
-      { value: "Every 12 s", label: "an AI describes what the dog is doing" },
+      { value: "Every 12 s", label: "Liquid AI checks on the dog" },
       { value: "Any camera", label: "an RTSP home camera, or a paired phone" },
     ],
     caveat: "A hackathon demo, not a veterinary device.",
@@ -115,7 +115,7 @@ export const projects: Project[] = [
     problem: "Drivers get stuck at KYC and never book a load. I owned this flow at a logistics marketplace.",
     how: ["Nudge each driver about one blocker", "Read documents into fields and flags", "Policy approves, asks for a fix, or escalates", "Trust graph flags shared bank accounts"],
     results: [
-      { value: "0 / 31", label: "bad drivers approved in testing" },
+      { value: "0 / 31", label: "bad drivers approved in tests" },
       { value: "16 / 16", label: "honest test drivers approved" },
       { value: "$0.10", label: "per 1,000 photos, Gemma in evals" },
     ],
@@ -136,7 +136,7 @@ export const projects: Project[] = [
     problem: "Slack fetches link previews from its own servers, so a secret can leave without anyone clicking (CVE-2025-34072).",
     how: ["Score every message the assistant reads", "Inspect every outbound tool call", "Refuse any call carrying a secret", "Stream each denial to a live feed"],
     results: [
-      { value: "1.00 → 0.00", label: "attack success rate, guard off → on" },
+      { value: "100% → 0%", label: "attack success, once guarded" },
       { value: "5 / 5", label: "direct attacks blocked" },
       { value: "55", label: "offline tests" },
     ],
