@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400&display=block" rel="stylesheet" />
+    <style>
+      * { box-sizing: border-box; margin: 0; }
+      html, body { width: 1200px; height: 630px; overflow: hidden; }
+      body {
+        font-family: "Inter Tight", -apple-system, BlinkMacSystemFont, "SF Pro Display", Helvetica, Arial, sans-serif;
+        color: #eef3f6;
+        background: #06121c;
+        position: relative;
+      }
+      canvas { position: absolute; inset: 0; }
+      .shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(6, 18, 28, 0.94) 0%, rgba(6, 18, 28, 0.78) 55%, rgba(6, 18, 28, 0.2) 100%); }
+      .card { position: absolute; inset: 64px 72px; display: flex; flex-direction: column; }
+      .pill { align-self: flex-start; padding: 10px 22px; border: 1.5px solid rgba(220, 235, 245, 0.38); border-radius: 999px;
+        font-size: 20px; letter-spacing: 0.06em; text-transform: uppercase; }
+      h1 { font-size: 84px; line-height: 1.02; letter-spacing: -0.04em; font-weight: 300; margin-top: 40px; max-width: 980px; }
+      .line { font-size: 34px; line-height: 1.2; letter-spacing: -0.02em; font-weight: 300; color: #93a5b3; margin-top: 14px; max-width: 900px; }
+      .bottom { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; }
+      .metric b { display: block; font-size: 52px; letter-spacing: -0.03em; font-weight: 300; }
+      .metric span { font-size: 22px; color: #c9d5dd; }
+      .domain { font-size: 22px; letter-spacing: 0.04em; text-transform: uppercase; color: #c9d5dd; }
+    </style>
+  </head>
+  <body>
+    <canvas id="bits" width="1200" height="630" aria-hidden="true"></canvas>
+    <div class="shade"></div>
+    <div class="card">
+      <span class="pill" id="who"></span>
+      <h1 id="title"></h1>
+      <p class="line" id="line"></p>
+      <div class="bottom">
+        <div class="metric"><b id="metric"></b><span id="mlabel"></span></div>
+        <div class="domain" id="domain"></div>
+      </div>
+    </div>
+    <script>
+      const d = JSON.parse(decodeURIComponent(location.hash.slice(1)));
+      for (const k of ["who", "title", "line", "metric", "mlabel", "domain"]) document.getElementById(k).textContent = d[k] || "";
+      
+      // The site's binary field, drawn once (seeded, so the cards don't change between runs).
+      const c = document.getElementById("bits").getContext("2d");
+      const g = c.createRadialGradient(780, 300, 0, 780, 300, 900);
+      g.addColorStop(0, "#103c58");
+      g.addColorStop(0.55, "#0a2940");
+      g.addColorStop(1, "#05141f");
+      c.fillStyle = g;
+      c.fillRect(0, 0, 1200, 630);
+      let s = 7;
+      const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+      c.font = "15px ui-monospace, Menlo, monospace";
+      for (let y = 0; y < 630; y += 19) {
+        const band = 0.55 + 0.45 * Math.sin(y * 0.02);
+        for (let x = 0; x < 1200; ) {
+          const run = 1 + Math.floor(rnd() * 8);
+          for (let k = 0; k < run && x < 1200; k++, x += 10) {
+            const b = band * (0.25 + 0.75 * rnd() ** 2);
+            c.fillStyle = `rgba(${60 + b * 130 | 0}, ${150 + b * 85 | 0}, ${205 + b * 50 | 0}, ${0.1 + b * 0.8})`;
+            c.fillText(rnd() < 0.5 ? "0" : "1", x, y + 15);
+          }
+          x += 10 * (1 + Math.floor(rnd() * 3));
+        }
+      }
+    </script>
+  </body>
+</html>

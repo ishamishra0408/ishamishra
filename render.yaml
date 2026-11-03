@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: isha-mishra-portfolio
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_BOOKING_URL
+        sync: false
+      - key: VITE_UMAMI_ID
+        sync: false
+    # Pre-rendered pages are real files, which Render serves before applying rewrites.
+    # Anything else gets the noindex 404 page (the app still routes it client-side).
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /404.html
