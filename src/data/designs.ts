@@ -2,7 +2,8 @@
 // entities, API, high-level design, deep dives. Every line comes from that repo's README, its
 // decision logs (tira: docs/decision-log.md, packing.md; DebugAssist: the pipeline's DECISIONS.md and
 // design/system-architecture-v0.md, kept outside the repo; DogMaAI: five decision records reconstructed
-// from its code on 2026-10-03, quoting the owner's rulings) or its code; if those change, change it here.
+// from its code on 2026-10-03, quoting the owner's rulings; Agent KYC: DECISIONS.md and the README's
+// engineering-decisions table) or its code; if those change, change it here.
 // The voice is neutral; `decidedBy` marks whose calls the deep dives are.
 
 export type Design = {
@@ -454,6 +455,149 @@ export const designs: Design[] = [
       { label: "Manager setup", url: "https://github.com/ishamishra0408/DogMaAI/blob/main/MANAGER_SETUP.md" },
       { label: "Tinybird", url: "https://github.com/ishamishra0408/DogMaAI/blob/main/TINYBIRD_INTEGRATION.md" },
       { label: "Nimble", url: "https://github.com/ishamishra0408/DogMaAI/blob/main/NIMBLE_INTEGRATION.md" },
+    ],
+  },
+  {
+    slug: "agent-kyc",
+    intro: "Driver KYC rebuilt AI-first, where a model reads the documents and only a policy can approve anyone.",
+    decidedBy: "Isha",
+    functional: [
+      "Tell each driver the one thing blocking them, at most once every two days and never at night.",
+      "Coach a photo the moment it's taken, and read each document into fields and flags.",
+      "Check the licence and PAN against registries, the bank account with a Rs 1 penny drop, and the selfie against the registry's photo.",
+      "Decide by policy: approve, ask for a fix, or send the case to a person, always with a reason.",
+      "Give reviewers only the hard cases, with their evidence and a drafted note.",
+      "Open bookings once a driver and their vehicle pass, and lock them again when the licence lapses.",
+    ],
+    outOfScope: [
+      "Real IDs: every test document is a generated SPECIMEN with a made-up person.",
+      "An Aadhaar anchor, liveness on the face match, and anything after approval, such as re-KYC.",
+      "Live registries and the marketplace: simulated in the demo, which also runs on stand-ins for the reader and the graph.",
+    ],
+    nonFunctional: [
+      { name: "No model can approve", text: "The status machine has no edge into approved for the AI." },
+      { name: "Explainable", text: "Every decision carries its reason codes and the policy version that made it." },
+      { name: "Fails closed", text: "A missing field, an unanswered graph or an off-schema reading goes to a person." },
+      { name: "Fair to honest drivers", text: "Transliterated names match, and a photo of a screen is a retake, not fraud." },
+      { name: "Auditable", text: "Decisions, events, penny drops and vehicles refuse edits in the database." },
+    ],
+    entities: [
+      { name: "Driver", text: "A status from signed up to approved, active or licence expired, with their consent, language and fleet owner." },
+      { name: "Document", text: "A licence, PAN or bank proof as read: fields, photo quality, a photo of a screen, hidden text, signs of editing, and who read it." },
+      { name: "Decision", text: "Outcome, reason codes, checks passed and policy version. Only the rules mint one; it's frozen and never edited." },
+      { name: "Event", text: "Every status change and action, append-only." },
+      { name: "Bank attempt", text: "One penny drop, kept. Three misses in 24 hours lock the step for a day." },
+      { name: "Vehicle", text: "A registration decided by its own policy: a goods vehicle, valid, in the driver's or their verified owner's name." },
+      { name: "Trust graph", text: "Drivers, bank accounts and fleet owners, to ask who else is paid into an account." },
+    ],
+    api: [
+      {
+        title: "The driver app",
+        calls: [
+          { sig: "POST /api/drivers/:id/consent", does: "starts KYC" },
+          { sig: "POST /api/drivers/:id/photo", does: "a document photo, coached and read" },
+          { sig: "POST /api/drivers/:id/digilocker", does: "fetch the licence or PAN instead" },
+          { sig: "POST /api/drivers/:id/bank-check", does: "the Rs 1 penny drop" },
+          { sig: "POST /api/drivers/:id/submit", does: "the policy decides" },
+          { sig: "POST /api/drivers/:id/vehicle", does: "the vehicle policy decides" },
+          { sig: "POST /api/drivers/:id/loads/:loadId/book", does: "only for approved drivers with a vehicle" },
+        ],
+      },
+      {
+        title: "The ops console",
+        calls: [
+          { sig: "GET /api/ops/review", does: "the cases sent to a person" },
+          { sig: "GET /api/ops/drivers/:id/case", does: "the evidence, the readings and the rules' decision" },
+          { sig: "GET /api/ops/drivers/:id/draft", does: "a first draft of the reviewer's note" },
+          { sig: "POST /api/ops/drivers/:id/decision", does: "approve, reject or ask for a fix, with the evidence kept" },
+          { sig: "GET /api/ops/evals", does: "the gate's latest results" },
+        ],
+        note: "Every status change goes through the API server; the reader and the trust graph only supply evidence.",
+      },
+    ],
+    diagram: [
+      { boxes: ["Driver app, on the phone", "Ops console, for reviewers"] },
+      { boxes: ["API server: the only place a status changes"] },
+      { boxes: ["Reader: Gemma 4 31B, Sonnet as fallback", "Registries and the penny drop", "Trust graph on Neo4j"] },
+      { boxes: ["Policy in Rego, run in-process as WebAssembly"] },
+      { boxes: ["Contract: mints the decision, or sends it to a person"] },
+      { boxes: ["SQLite: decisions and events that refuse edits"], store: true },
+    ],
+    caption: "The reader, registries and graph supply evidence; only the policy, through the contract, decides.",
+    walkthrough: {
+      title: "A driver submits",
+      steps: [
+        "Each photo is checked for sharpness, brightness and glare the moment it's taken; the same check runs again at submit.",
+        "The reader sees only the photo, not the slot or the number the driver typed, and answers in a strict schema; an answer off the schema counts as unreadable.",
+        "Registry lookups run only on numbers from good photos. The penny drop finds the account and its holder, and the trust graph says who else is paid into it.",
+        "TypeScript gathers the facts, name matching included; the policy returns the outcome, its reasons and the checks passed.",
+        "The contract checks that answer, refuses an approval without all five core checks, and mints the decision. Only minted decisions apply.",
+        "Approved: bookings open once a vehicle passes. A fix: the driver is told exactly what to redo. A person: the driver sees only \"a person is checking\".",
+      ],
+    },
+    deepDives: [
+      {
+        q: "Who decides: the model or the rules?",
+        considered: [
+          "The model decides above a confidence threshold. Fast, but KYC mistakes are costly and have to be explained.",
+          "Rules only, with no model. Explainable, but it can't read a document.",
+        ],
+        chose: "The model reads and flags; rules decide. No edge into approved in the status machine allows the AI, and a test checks every edge. Rules give every decision a reason code and a version.",
+        tradeoff: "Rules need upkeep, and a case the rules can't settle goes to a person, never to the model's judgment.",
+      },
+      {
+        q: "How does \"the AI can't approve\" hold even against a bug?",
+        considered: ["Trust the policy's output."],
+        chose: "A contract around the policy is the only place a decision is minted, and it freezes each one; the onboarding service refuses anything else. It rejects an unknown reason code, a mismatched severity, or an outcome that doesn't follow from its reasons, and sends any approval lacking one of the five core checks to a person. The database handle is private, and triggers make the decision and event logs refuse updates and deletes.",
+        tradeoff: "The key rules are written twice, in Rego and in TypeScript.",
+      },
+      {
+        q: "Where do the rules live?",
+        considered: ["Rules in TypeScript, or a policy server."],
+        chose: "Policy as code in Rego, on Open Policy Agent, compiled to WebAssembly and run inside the app: no policy server, and tests stay offline. TypeScript gathers the facts; the policy returns the outcome and reasons. The switch happened only after the Rego port reproduced 137 recorded decisions byte for byte, and every policy change since shows up as a diff against them.",
+        tradeoff: "A second language and a build step. The compiled policy lives in the repo, so running the app needs no OPA install.",
+      },
+      {
+        q: "When is a driver approved?",
+        considered: ["Approve when nothing objects. An audit caught an earlier build approving a driver whose photo came back with no number, on their typed name alone."],
+        chose: "Only on positive evidence from every check: a registry record for the licence and the PAN, a verified bank account and a matched selfie. Registry lookups run only on good photos, so a bad photo means \"retake\", never \"not found\". If anything needs a person, the case goes to a person even when something fixable is also wrong, and a third request for the same fix goes to a person too.",
+        tradeoff: "More cases reach a person; an absence of problems never approves anyone.",
+      },
+      {
+        q: "How is an AI reader proven before it reads for a driver?",
+        considered: ["Tune prompts inside the app."],
+        chose: "Tests before prompts: 31 cases and a gate (no bad case approved, at most one good case missed) before any model code, plus 16 holdout cases written from the policy alone by an agent that never saw the code. A reader switches on in the app only after passing the gate on both sets.",
+        tradeoff: "A slower start, paid back when the gate caught a client timeout bug.",
+      },
+      {
+        q: "Which model reads the documents?",
+        considered: ["Claude Opus for every photo. Every case right, at $13.74 per 1,000 photos."],
+        chose: "Five models compared on the same cases for $3.48. Gemma 4 31B, an open-weight model, got every case right at $0.10 per 1,000 photos; Claude Sonnet steps in when Gemma is slower than 15 seconds or fails. Every model call goes through OpenRouter, at temperature 0, into a strict schema.",
+        tradeoff: "About 9 seconds a photo, and $0.68 per 1,000 with the fallback. The reader rarely notices a forged edit: on public IDNet forgeries it reported 15 of 120, so its tamper flag is a safety net, not a detector.",
+      },
+      {
+        q: "How are shared bank accounts caught?",
+        considered: ["The in-memory graph it started with, kept for tests."],
+        chose: "A trust graph on Neo4j Aura, over its HTTPS Query API, so there's no driver package. One TypeScript function defines what a shared account means for both graphs, and the two decide all 94 test cases alike. If the graph doesn't answer, the case goes to a person: no answer is never read as \"no shared account\".",
+        tradeoff: "A network hop of about 0.15 seconds a check, and a free tier that pauses after three days without writes; while it's paused, cases go to a person.",
+      },
+      {
+        q: "What about instructions hidden on a document?",
+        considered: ["Rely on the reader alone to flag them."],
+        chose: "Text on a document is data. The reader copies anything aimed at the verification into its reading as evidence, and the app scans every transcribed field for instruction-like text as a second look. Either sends the case to a person, never to a rejection. The driver sees only \"a person is checking\", so they can't learn to hide it better.",
+        tradeoff: "The scan can't see text the reader left out entirely, and a name like \"Approval Devi\" goes to a person.",
+      },
+    ],
+    next: [
+      "Dedicated forgery checks: a template's security features, and the card's portrait against the registry's.",
+      "An Aadhaar anchor, liveness on the face match, and re-KYC after approval.",
+      "A server database instead of in-memory SQLite, and retries and failover for providers.",
+    ],
+    sources: [
+      { label: "README", url: "https://github.com/ishamishra0408/Agent-KYC#readme" },
+      { label: "Decision log", url: "https://github.com/ishamishra0408/Agent-KYC/blob/main/DECISIONS.md" },
+      { label: "Failure log", url: "https://github.com/ishamishra0408/Agent-KYC/blob/main/FAILURES.md" },
+      { label: "How the tests work", url: "https://github.com/ishamishra0408/Agent-KYC/blob/main/evals/README.md" },
     ],
   },
 ];
