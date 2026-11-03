@@ -104,7 +104,7 @@ function Footer() {
           <span suppressHydrationWarning>
             {profile.workAuth} · © {new Date().getFullYear()}
           </span>
-          {UMAMI_ID && <span>No cookies. Anonymous visit counts only.</span>}
+          {UMAMI_ID && <span>Visit stats are anonymous and cookie-free.</span>}
         </div>
         <nav className="foot-links" aria-label="Elsewhere">
           <a href={`mailto:${profile.email}`}>Email</a>
