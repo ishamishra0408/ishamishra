@@ -245,7 +245,6 @@ export function Home() {
           <div className="sec-head">
             <h2 id="pj-h">
               Projects I've built
-              <span>Agents with guardrails, shipped and measured.</span>
             </h2>
             <a className="btn-w" href={profile.links.github} target="_blank" rel="noreferrer">
               All on GitHub <Arrow />
