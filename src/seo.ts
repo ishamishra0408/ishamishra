@@ -2,6 +2,7 @@
 // llms.txt) and the browser (document.title on client-side navigation).
 
 import { SITE_URL } from "./config";
+import { designFor, designs } from "./data/designs";
 import { education, profile } from "./data/profile";
 import { projects } from "./data/projects";
 import { POST } from "./data/views";
@@ -53,6 +54,29 @@ export function routeMeta(route: Route): Meta {
         codeRepository: p.repo,
         url: abs(paths.project(p.slug)),
         programmingLanguage: p.stack[0],
+        author: { "@type": "Person", "@id": PERSON_ID, name: profile.name },
+        ...(p.coBuilders?.length ? { contributor: p.coBuilders.map((name) => ({ "@type": "Person", name })) } : {}),
+      },
+    };
+  }
+  if (route.name === "design") {
+    const p = projects.find((x) => x.slug === route.slug)!;
+    const d = designFor(route.slug)!;
+    const title = `${p.name}: system design`;
+    return {
+      path: paths.design(p.slug),
+      title: `${title} · ${profile.name}`,
+      description: `How ${p.name} is built: requirements, core entities, API, high-level design and the trade-offs behind it. ${d.intro}`,
+      image: abs(`/og/${p.slug}.jpg`),
+      imageAlt: `${p.name}: ${p.tagline}`,
+      type: "article",
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        headline: title,
+        description: d.intro,
+        url: abs(paths.design(p.slug)),
+        about: { "@type": "SoftwareSourceCode", name: p.name, codeRepository: p.repo },
         author: { "@type": "Person", "@id": PERSON_ID, name: profile.name },
         ...(p.coBuilders?.length ? { contributor: p.coBuilders.map((name) => ({ "@type": "Person", name })) } : {}),
       },
@@ -166,6 +190,12 @@ export function llmsTxt(): string {
     "",
     "## Projects",
     ...projects.map(line),
+    "",
+    "## System design",
+    ...designs.map((d) => {
+      const p = projects.find((x) => x.slug === d.slug)!;
+      return `- [${p.name}: how it's built](${abs(paths.design(d.slug))}): ${d.intro}`;
+    }),
     "",
     "## Writing",
     `- [${POST.title}](${abs(paths.writing)}): ${POST.description}`,

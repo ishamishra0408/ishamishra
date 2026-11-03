@@ -1319,6 +1319,362 @@ h2.label {
   color: var(--accent);
 }
 
+/* The link from a project to its system design. */
+.pj-design {
+  display: grid;
+  gap: 0.3rem;
+  margin-top: 2.5rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: radial-gradient(140% 140% at 0% 0%, rgba(22, 92, 138, 0.3), rgba(8, 30, 48, 0.1) 70%);
+  transition: border-color 0.15s ease;
+}
+.pj-design:hover {
+  border-color: var(--line-strong);
+}
+.pj-design-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.375rem;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  transition: color 0.15s ease;
+}
+.pj-design:hover .pj-design-name {
+  color: var(--accent);
+}
+
+/* A system design page: Hello Interview's five steps, one section each. */
+.ds-steps ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.75rem;
+}
+.ds-steps a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 32px;
+  padding: 0 0.85rem 0 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--soft);
+  font-size: 0.8125rem;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.ds-steps a:hover {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+.ds-steps a span,
+.ds-n {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: rgba(92, 200, 240, 0.14);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.ds-section {
+  margin-top: 4rem;
+  scroll-margin-top: 5.5rem;
+}
+.ds-h {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: clamp(1.375rem, 1.1rem + 0.8vw, 1.75rem);
+  font-weight: 300;
+  letter-spacing: -0.025em;
+}
+.ds-h .ds-n {
+  width: 2rem;
+  height: 2rem;
+  font-size: 0.875rem;
+}
+.ds-section h3.label {
+  margin: 1.75rem 0 0.75rem;
+}
+.ds-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 2.5rem;
+}
+@media (max-width: 720px) {
+  .ds-cols {
+    grid-template-columns: 1fr;
+  }
+}
+.ds-list {
+  display: grid;
+  gap: 0.6rem;
+  padding-left: 1.25rem;
+  color: var(--soft);
+  font-size: 0.9375rem;
+}
+ol.ds-list {
+  list-style: decimal;
+}
+ul.ds-list {
+  list-style: disc;
+}
+.ds-list li::marker {
+  color: var(--muted);
+}
+.ds-list b {
+  color: var(--ink);
+  font-weight: 400;
+}
+.ds-out {
+  color: var(--muted);
+}
+.ds-section code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+}
+.ds-section :not(pre) > code {
+  padding: 0.05em 0.35em;
+  border-radius: 4px;
+  background: rgba(220, 235, 245, 0.08);
+  color: var(--ink);
+}
+.ds-entities {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+@media (max-width: 720px) {
+  .ds-entities {
+    grid-template-columns: 1fr;
+  }
+}
+.ds-entities > div {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(8, 30, 48, 0.35);
+}
+.ds-entities dt {
+  font-size: 1rem;
+}
+.ds-entities dd {
+  margin-top: 0.3rem;
+  color: var(--soft);
+  font-size: 0.875rem;
+}
+.ds-api + .ds-api {
+  margin-top: 0.5rem;
+}
+.ds-endpoint {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 8px;
+  background: rgba(92, 200, 240, 0.1);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+.ds-calls {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(3, 14, 23, 0.6);
+}
+.ds-calls li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 0.25rem 1.5rem;
+  padding: 0.6rem 1.1rem;
+  font-size: 0.875rem;
+}
+.ds-calls li + li {
+  border-top: 1px solid var(--line);
+}
+.ds-section .ds-calls code {
+  padding: 0;
+  background: none;
+  overflow-wrap: anywhere;
+}
+.ds-calls span {
+  color: var(--soft);
+}
+@media (max-width: 640px) {
+  .ds-calls li {
+    grid-template-columns: 1fr;
+  }
+}
+.ds-api .muted {
+  margin-top: 0.6rem;
+}
+.ds-diagram {
+  display: grid;
+  gap: 1.75rem;
+  margin-top: 1.75rem;
+}
+.ds-row {
+  position: relative;
+  display: grid;
+  justify-items: center;
+}
+/* A box beside a row hangs to the right, so the main column stays centred under its arrows. */
+.ds-row.has-side {
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+}
+.ds-row.has-side .ds-boxes {
+  grid-column: 2;
+  width: auto;
+}
+/* An arrow down into every row but the first. */
+.ds-row + .ds-row::before {
+  content: "";
+  position: absolute;
+  top: -1.5rem;
+  left: 50%;
+  width: 1px;
+  height: 1.1rem;
+  background: var(--line-strong);
+}
+.ds-row + .ds-row::after {
+  content: "";
+  position: absolute;
+  top: -0.55rem;
+  left: calc(50% - 4px);
+  border: 4px solid transparent;
+  border-top-color: var(--line-strong);
+}
+.ds-boxes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+}
+.ds-box {
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: rgba(8, 30, 48, 0.75);
+  font-size: 0.875rem;
+  text-align: center;
+}
+.ds-row.is-store .ds-box {
+  border-color: rgba(92, 200, 240, 0.6);
+  background: rgba(92, 200, 240, 0.1);
+}
+.ds-side {
+  position: relative;
+  grid-column: 3;
+  justify-self: start;
+  margin-left: 1.25rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: 12px;
+  color: var(--soft);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+.ds-side::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  width: 1.25rem;
+  border-top: 1px dashed var(--line-strong);
+}
+@media (max-width: 640px) {
+  .ds-row.has-side {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 0.6rem;
+  }
+  .ds-row.has-side .ds-boxes,
+  .ds-side {
+    grid-column: 1;
+  }
+  .ds-side {
+    justify-self: center;
+    margin-left: 0;
+  }
+  .ds-side::before {
+    display: none;
+  }
+}
+.ds-diagram figcaption {
+  text-align: center;
+}
+.ds-dives {
+  display: grid;
+  gap: 2.5rem;
+  margin-top: 1.75rem;
+  counter-reset: dive;
+}
+.ds-dive h3 {
+  font-size: 1.125rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+.ds-dive h3::before {
+  counter-increment: dive;
+  content: counter(dive) ". ";
+  color: var(--muted);
+}
+.ds-by {
+  display: inline-block;
+  margin-top: 0.4rem;
+  padding: 0.1rem 0.55rem;
+  border: 1px solid rgba(92, 200, 240, 0.35);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+}
+.ds-opt {
+  margin-top: 0.75rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--line);
+  color: var(--soft);
+  font-size: 0.9375rem;
+}
+.ds-opt .label {
+  display: block;
+  margin-bottom: 0.15rem;
+  font-size: 0.75rem;
+}
+.ds-considered {
+  border-left-color: rgba(242, 185, 138, 0.5);
+}
+.ds-considered .label {
+  color: #f2b98a;
+}
+.ds-chose {
+  border-left-color: rgba(127, 211, 242, 0.7);
+  color: var(--ink);
+}
+.ds-chose .label {
+  color: #7fd3f2;
+}
+.ds-next {
+  margin-top: 2.5rem;
+}
+.ds-sources {
+  margin-top: 3.5rem;
+}
+.ds-sources a {
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 0.25em;
+}
+
 /* ---------- Older button classes (demos, sheets) ---------- */
 .btn {
   display: inline-flex;

@@ -1,6 +1,7 @@
 import { Component, useEffect, useState, type ReactNode } from "react";
 import { BinaryField } from "./components/BinaryField";
 import { CommandPalette } from "./components/CommandPalette";
+import { DesignPage } from "./components/DesignPage";
 import { BookingSheet } from "./components/Contact";
 import { Arrow, Home, NewTab, SECTIONS } from "./components/Home";
 import { Link } from "./components/Link";
@@ -28,6 +29,7 @@ class Optional extends Component<{ children: ReactNode }, { failed: boolean }> {
 function Page() {
   const { route } = useUI();
   if (route.name === "project") return <ProjectPage key={route.slug} slug={route.slug} />;
+  if (route.name === "design") return <DesignPage key={route.slug} slug={route.slug} />;
   if (route.name === "resume") return <ResumePage />;
   if (route.name === "writing") return <WritingPage />;
   if (route.name === "notfound") return <NotFound />;

@@ -1,5 +1,6 @@
 import { KycDemo } from "../demos/KycDemo";
 import { NoLeakDemo } from "../demos/NoLeakDemo";
+import { designFor } from "../data/designs";
 import { projects } from "../data/projects";
 import { TechChips } from "./TechChips";
 import { paths } from "../router";
@@ -130,6 +131,16 @@ export function ProjectPage({ slug }: { slug: string }) {
           ))}
         </ul>
         {p.caveat && <p className="muted small pj-caveat">Caveat: {p.caveat}</p>}
+
+        {designFor(p.slug) && (
+          <Link className="pj-design" to={paths.design(p.slug)}>
+            <span className="label">System design</span>
+            <span className="pj-design-name">
+              How it's built <Arrow />
+            </span>
+            <span className="muted small">Requirements, core entities, API, high-level design and the trade-offs</span>
+          </Link>
+        )}
 
         {p.image && (
           <figure className="pj-shot">
