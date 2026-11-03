@@ -5,7 +5,7 @@ import { paths } from "../router";
 import { Arrow } from "./Home";
 import { Link } from "./Link";
 
-// The Engineering Blog: each project's system design, then the essay on the calls behind them.
+// Engineering Blogs: each project's system design, then the essay on the calls behind them.
 export function BlogPage() {
   const posts = [
     ...designs.map((d) => {
@@ -27,8 +27,8 @@ export function BlogPage() {
       <div className="frame narrow">
         <header className="pj-head">
           <h1 className="pj-title">
-            Engineering Blog
-            <span>How the projects are built: requirements, design and the calls behind them, in Hello Interview's format.</span>
+            Engineering Blogs
+            <span>How the projects are built: requirements, design and the calls behind them.</span>
           </h1>
         </header>
         <ul className="blog-list">

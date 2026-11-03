@@ -85,15 +85,15 @@ export function routeMeta(route: Route): Meta {
   if (route.name === "blog") {
     return {
       path: paths.blog,
-      title: `Engineering Blog · ${profile.name}`,
-      description: `How ${profile.name}'s projects are built: system designs in Hello Interview's format (requirements, core entities, API, high-level design, deep dives), and the calls behind them.`,
+      title: `Engineering Blogs · ${profile.name}`,
+      description: `How ${profile.name}'s projects are built: requirements, core entities, API, high-level design, and the calls behind them.`,
       image: abs("/og/home.jpg"),
-      imageAlt: `${profile.name}: Engineering Blog`,
+      imageAlt: `${profile.name}: Engineering Blogs`,
       type: "website",
       jsonLd: {
         "@context": "https://schema.org",
         "@type": "Blog",
-        name: `Engineering Blog · ${profile.name}`,
+        name: `Engineering Blogs · ${profile.name}`,
         url: abs(paths.blog),
         author: { "@type": "Person", "@id": PERSON_ID, name: profile.name },
       },
@@ -208,7 +208,7 @@ export function llmsTxt(): string {
     "## Projects",
     ...projects.map(line),
     "",
-    `## [Engineering blog](${abs(paths.blog)})`,
+    `## [Engineering blogs](${abs(paths.blog)})`,
     ...designs.map((d) => {
       const p = projects.find((x) => x.slug === d.slug)!;
       return `- [${p.name}: how it's built](${abs(paths.design(d.slug))}): ${d.intro}`;

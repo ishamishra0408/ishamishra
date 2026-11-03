@@ -21,15 +21,15 @@ export function CommandPalette() {
       { id: "email", label: "Copy email", group: "Action", run: async () => ui.toast((await copyText(profile.email)) ? "Email copied" : profile.email) },
       ...SECTIONS.map((s) => ({ id: `go-${s.id}`, label: s.label, group: "Section", run: () => ui.goTo(s.id) })),
       { id: "resume", label: "Résumé", group: "Page", run: () => ui.navigate(paths.resume), keywords: "cv resume pdf" },
-      { id: "blog", label: "Engineering Blog", group: "Page", run: () => ui.navigate(paths.blog), keywords: "writing posts system design" },
+      { id: "blog", label: "Engineering Blogs", group: "Page", run: () => ui.navigate(paths.blog), keywords: "writing posts system design" },
       ...designs.map((d) => ({
         id: `design-${d.slug}`,
         label: `${projects.find((p) => p.slug === d.slug)!.name}: how it's built`,
-        group: "Engineering Blog",
+        group: "Engineering Blogs",
         run: () => ui.navigate(paths.design(d.slug)),
         keywords: "system design architecture decisions hello interview",
       })),
-      { id: "writing", label: "Six calls I make when building AI agents", group: "Engineering Blog", run: () => ui.navigate(paths.writing), keywords: "views principles how i think post writing" },
+      { id: "writing", label: "Six calls I make when building AI agents", group: "Engineering Blogs", run: () => ui.navigate(paths.writing), keywords: "views principles how i think post writing" },
       { id: "d1", label: "Leak a key through Slack", group: "Demo", run: () => ui.navigate(`${paths.project("noleak-mcp")}#demo`), keywords: "security mcp" },
       { id: "d3", label: "Approve a driver", group: "Demo", run: () => ui.navigate(`${paths.project("agent-kyc")}#demo`), keywords: "policy rego" },
       ...projects.map((p) => ({

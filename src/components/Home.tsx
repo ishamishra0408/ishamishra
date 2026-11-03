@@ -99,14 +99,14 @@ function Tile({
   );
 }
 
-/** The deployment (when there is one) and the code. */
+/** Live (when anyone can use it) and the code, named the same on every card. An invite-only
+ *  deployment is linked from the project's own page. */
 function ProjectLinks({ p }: { p: Project }) {
   return (
     <p className="links">
-      {p.live && (
+      {p.live && !p.live.note && (
         <a href={p.live.url} target="_blank" rel="noreferrer">
-          {p.live.label}
-          {p.live.note ? ` (${p.live.note})` : ""} <Arrow />
+          Live <Arrow />
           <NewTab />
         </a>
       )}
@@ -196,12 +196,6 @@ export function Home() {
               Full résumé <Arrow />
             </Link>
           </div>
-          <p className="now">
-            <span className="label">Now</span>
-            <span>
-              {profile.now.role}, {profile.now.org}
-            </span>
-          </p>
           <ul className="roles">
             {roles.map((r, i) => (
               <Tile className="role tile-in" style={{ "--i": i } as CSSProperties} key={r.id}>
@@ -270,11 +264,9 @@ export function Home() {
                 <h3>
                   <Link to={paths.project(p.slug)}>{p.name}</Link>
                 </h3>
-                <p className="muted">
-                  {p.tagline}
-                  {p.coBuilders?.length ? ` With ${p.coBuilders.join(", ")}.` : ""}
-                </p>
-                <TechChips stack={p.stack} small />
+                <p className="muted">{p.tagline}</p>
+                {p.coBuilders?.length ? <p className="card-by">With {p.coBuilders.join(", ")}</p> : null}
+                <TechChips stack={p.stack} small limit={2} />
                 <ProjectLinks p={p} />
               </li>
             ))}
@@ -284,15 +276,14 @@ export function Home() {
         {/* The close: two tiles side by side, in the same style as the work tiles. */}
         <section className="sec frame closing" id="contact" aria-label="How I think, and how to reach me">
           <Tile as="div" lean={0.4} className="role close-tile tile-in" style={{ "--i": 0 } as CSSProperties}>
-            <p className="label">Engineering Blog</p>
+            <p className="label">Engineering Blogs</p>
             <h2 id="th-h">How the projects are built</h2>
             <p className="muted">
-              System designs in Hello Interview's format: requirements, the design, and the calls behind it.{" "}
-              {COUNT[designs.length] ?? designs.length} so far.
+              Requirements, the design, and the calls behind it. {COUNT[designs.length] ?? designs.length} so far.
             </p>
             <div className="actions">
               <Link className="btn-w" to={paths.blog}>
-                Read the blog <Arrow />
+                Read the blogs <Arrow />
               </Link>
               <button className="btn-g" onClick={() => setQuiz(true)}>
                 Take the quiz

@@ -63,7 +63,7 @@ function Nav() {
               {s.label}
             </Link>
           ))}
-          <Link to={paths.blog}>Engineering Blog</Link>
+          <Link to={paths.blog}>Engineering Blogs</Link>
           <Link to={paths.resume}>Résumé</Link>
         </nav>
         <div className="nav-actions">
@@ -87,7 +87,7 @@ function Nav() {
               </Link>
             ))}
             <Link to={paths.blog} onClick={() => setMenu(false)}>
-              Engineering Blog
+              Engineering Blogs
             </Link>
             <Link to={paths.resume} onClick={() => setMenu(false)}>
               Résumé

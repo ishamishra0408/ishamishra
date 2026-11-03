@@ -592,14 +592,23 @@ p {
   margin-top: 0.25rem;
   font-size: 0.875rem;
 }
+.card-by {
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
 /* Cards in a row share a height; the links sit at the bottom so they line up. */
 .card {
   display: flex;
   flex-direction: column;
 }
-.card .links {
+/* The chips and links sit together at the bottom, so every card's chips line up too. */
+.card .tech.tech-sm {
   margin-top: auto;
-  padding-top: 0.9rem;
+  padding-top: 0.85rem;
+}
+.card .links {
+  padding-top: 0.6rem;
 }
 
 /* Asterisk lists */
@@ -686,21 +695,6 @@ p {
   background: radial-gradient(90% 140% at 30% 50%, rgba(92, 200, 240, 0.32), rgba(26, 72, 120, 0.32) 60%, rgba(26, 72, 120, 0.12));
   transition: transform 0.35s var(--ease), width 0.35s var(--ease);
 }
-.now {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.4rem 1.25rem;
-  margin-bottom: 1.5rem;
-  padding: 0.9rem 1.25rem;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.025);
-}
-.now .label {
-  color: #5fd38d;
-}
-
 /* Experience: every role side by side, each with its logo and its two impact numbers. */
 .roles {
   display: grid;
@@ -1123,8 +1117,16 @@ h2.label {
 }
 /* The same chips, small, on the home page's project cards. */
 .tech.tech-sm {
+  flex-wrap: nowrap;
   gap: 0.35rem;
   margin-top: 0.85rem;
+}
+.tech-sm li {
+  white-space: nowrap;
+}
+.tech-sm .tech-more {
+  padding: 0.25rem 0.55rem;
+  color: var(--muted);
 }
 .tech-sm li {
   gap: 0.35rem;

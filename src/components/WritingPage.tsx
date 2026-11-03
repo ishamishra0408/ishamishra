@@ -29,7 +29,7 @@ export function WritingPage() {
         </button>
         <header className="pj-head">
           <p className="pj-meta">
-            <span className="pill">Engineering Blog</span>
+            <span className="pill">Engineering Blogs</span>
             <time dateTime={POST.date}>{POST.dateLabel}</time>
           </p>
           <h1 className="pj-title">
