@@ -1,7 +1,8 @@
 // System design write-ups, one per project, in Hello Interview's order: requirements, core
 // entities, API, high-level design, deep dives. Every line comes from that repo's README, its
 // decision logs (tira: docs/decision-log.md, packing.md; DebugAssist: the pipeline's DECISIONS.md and
-// design/system-architecture-v0.md, kept outside the repo) or its code; if those change, change it here.
+// design/system-architecture-v0.md, kept outside the repo; DogMaAI: five decision records reconstructed
+// from its code on 2026-10-03, quoting the owner's rulings) or its code; if those change, change it here.
 // The voice is neutral; `decidedBy` marks whose calls the deep dives are.
 
 export type Design = {
@@ -321,6 +322,138 @@ export const designs: Design[] = [
       { label: "Decision log", url: "https://github.com/ishamishra0408/DebugAssist/blob/main/docs/DECISIONS.md" },
       { label: "Results", url: "https://github.com/ishamishra0408/DebugAssist/blob/main/docs/RESULTS.md" },
       { label: "Hosting", url: "https://github.com/ishamishra0408/DebugAssist/blob/main/deploy/DEPLOY.md" },
+    ],
+  },
+  {
+    slug: "dogmaai",
+    intro: "A home-camera companion for a dog left alone, built so the camera, microphone and speaker in someone's home stay private and safe.",
+    decidedBy: "Isha",
+    functional: [
+      "Show a home camera (any RTSP camera) or a paired phone live, and describe what the dog is doing about every 12 seconds.",
+      "Keep a diary of the dog's day: a new entry whenever its activity or place changes.",
+      "Hear crying and barking, and say how long the dog cried while alone.",
+      "Play calm music, brown noise or found free-license recordings through the camera's own speaker.",
+      "Turn a week of readings into PetAnalytics: how the dog felt alone, how long it cried, and whether the music helped.",
+      "Reach every control from the owner's phone, on any network.",
+    ],
+    outOfScope: [
+      "Veterinary, medical or safety use: it doesn't diagnose or treat separation anxiety.",
+      "Alerts from the live camera: only the bundled sample clip raises alerts.",
+      "SMS, email or push: alerts are in-app only.",
+    ],
+    nonFunctional: [
+      { name: "Private by design", text: "No frames, recordings or sound are stored; audio becomes per-minute counts." },
+      { name: "Keys stay on the server", text: "Every key is read by the API alone; the browser never sees one." },
+      { name: "Safe in the room", text: "The speaker plays only sounds the server made or vetted, levelled, faded in and time-limited." },
+      { name: "Within free tiers", text: "Tinybird's free plan allows 1,000 reads a day, so no read runs on a timer." },
+      { name: "Only the owner gets in", text: "This Mac, or the Mac's own Tailscale login on the owner's devices." },
+    ],
+    entities: [
+      { name: "Reading", text: "One look at the camera, about every 12 seconds: is the dog visible, what is it doing, where, and is a person in view." },
+      { name: "Diary entry", text: "Liquid AI's description of the dog, saved when its activity or place changes." },
+      { name: "Sound minute", text: "Seconds heard, crying and barking in one minute. Never audio." },
+      { name: "Comfort event", text: "A sound that started, with its name and where it came from." },
+      { name: "Found sound", text: "A free-license recording from Wikimedia Commons, addressed by an ID the server issued." },
+      { name: "Session", text: "The sample clip's journal: observations, confirmed changes, situations and one alert, kept in SQLite so a restart recovers it." },
+      { name: "Owner notification", text: "An alert, with guidance links when they arrive in time, shown in the app." },
+    ],
+    api: [
+      {
+        title: "The manager, from this Mac or the owner's Tailscale login",
+        calls: [
+          { sig: "GET /api/manager/connections", does: "each service's status, never a key" },
+          { sig: "POST /api/manager/camera/home", does: "watch the home camera" },
+          { sig: "POST /api/manager/camera/pair", does: "pair a phone as the camera, by QR code" },
+          { sig: "GET /api/manager/diary", does: "the dog diary" },
+          { sig: "GET /api/manager/analytics", does: "PetAnalytics for the last seven days" },
+          { sig: "POST /api/manager/sounds/search", does: "find free-license sounds through Nimble" },
+          { sig: "POST /api/manager/camera/speaker", does: "play a sound on the camera speaker, by its ID" },
+          { sig: "GET | POST /api/manager/hearing", does: "listen live, and tune the crying cut-off" },
+        ],
+      },
+      {
+        title: "The camera and the sample journal",
+        calls: [
+          { sig: "POST /api/camera/:id/frame", does: "a paired phone sends its latest frame" },
+          { sig: "POST /api/camera/:id/analyze", does: "Liquid AI describes the latest frame" },
+          { sig: "DELETE /api/camera/:id", does: "end the phone's session" },
+          { sig: "POST /api/sessions/:id/restart", does: "rebuild the sample journal from SQLite" },
+          { sig: "GET /api/sessions/:id/stream", does: "the journal's updates, as server-sent events" },
+        ],
+        note: "Requests through Tailscale must carry the Mac's own login and the page's own origin.",
+      },
+    ],
+    diagram: [
+      { boxes: ["Home camera, or a paired phone", "The owner: this Mac, or a phone over Tailscale"] },
+      { boxes: ["API on the Mac: holds every key, bound to localhost"], side: "One camera connection; only the latest frame kept" },
+      { boxes: ["Liquid AI: describes the dog every 12 s", "YAMNet: hears crying and barking"] },
+      { boxes: ["Tinybird: readings, diary, sound counts, comfort events"], store: true, side: "Read from memory, cached 10 minutes" },
+      { boxes: ["Dog diary and PetAnalytics", "Comfort sounds through go2rtc to the camera speaker"] },
+    ],
+    caption: "Everything that sees or hears the dog runs on the Mac; only labels and counts leave it.",
+    walkthrough: {
+      title: "A reading from the home camera",
+      steps: [
+        "ffmpeg reads the camera once, keeping only the latest frame in memory (4 a second, up to 640 px wide); the same connection carries the sound.",
+        "About every 12 seconds, the page asks Liquid AI on the Mac to describe the latest frame. Pages watching together share a reading from the last 10 seconds, so one moment isn't counted twice.",
+        "A short text-only request reads four labels from the description: is the dog visible, what is it doing, where, and is a person in view.",
+        "Labels go to Tinybird in batches, every 30 seconds or 20 rows. When the dog's activity or place changes, the description goes to the diary, and counts as saved only once Tinybird confirms it.",
+        "Meanwhile YAMNet scores each 0.975-second window of sound, and each minute becomes counts of seconds heard, crying and barking.",
+        "PetAnalytics reads the last seven days, cached for 10 minutes.",
+      ],
+    },
+    deepDives: [
+      {
+        q: "Where do the keys live?",
+        considered: ["Connect services from a Settings form in the browser, as an earlier build did. Keys passed through the page."],
+        chose: "Every service is configured in .env and read by the API alone; Settings shows status and never asks for a key. The API drops the Tinybird admin token from its own environment at start and binds to localhost, and its ffmpeg and go2rtc children get PATH and nothing else.",
+        tradeoff: "Changing a key means restarting the API. Two child processes still inherit more than they should (the phone tunnel and the vision server), a known gap.",
+      },
+      {
+        q: "How does the speaker in the room stay safe?",
+        considered: ["Play whatever a page asks for. A loud or sudden sound is a welfare problem, and a speaker that fetches any address is a way into the home."],
+        chose: "It plays only what the server made or vetted: synthesised calm music and brown noise, or found recordings addressed by a server-issued ID and downloaded only from upload.wikimedia.org. Every recording is levelled, fades in over 3 seconds and stops at 30 minutes; Loud goes through a limiter instead of clipping. go2rtc runs with a password, bound to loopback, and its replies are never passed on.",
+        tradeoff: "The owner can't play an arbitrary file on the camera, and there's no voice option.",
+      },
+      {
+        q: "How does the microphone stay private?",
+        chose: "Sound is classified on the Mac by YAMNet. Each 0.975-second window becomes crying and barking scores, then a per-minute count of seconds, and only the counts reach Tinybird. The sound comes over the same connection as the video, so the camera is opened once. While DogMaAI plays through the camera, those seconds count as muted, not quiet.",
+        tradeoff: "No recording exists to replay or leak, so nothing can be checked again later. The crying cut-off hasn't been validated on real dog audio; Listen live lets the owner mark moments and adopt a tuned one.",
+      },
+      {
+        q: "How does it stay within Tinybird's free reads?",
+        considered: ["Re-read Tinybird on a timer, as the diary first did: every 30 seconds in every open tab, about 120 reads an hour per tab. It used 789 of the 1,000 free daily reads."],
+        chose: "Reads come from the server's memory wherever possible. The diary reads once per API start and merges new entries in memory; PetAnalytics caches its three queries for 10 minutes and serves the cache when a read fails; a background tab doesn't poll. Writes, which the free plan doesn't count, go in batches. No read is ever added on a timer.",
+        tradeoff: "A new comfort event can take up to 10 minutes to show on PetAnalytics.",
+      },
+      {
+        q: "Why doesn't the live camera raise alerts?",
+        considered: ["Feed live captions to the rules engine that drives the sample clip. Nobody has validated a 3B model's captions as alert triggers."],
+        chose: "Two paths, kept apart. The rules engine (confirmed changes, situations, one alert) runs only on the sample clip's reviewed observations. Live footage goes from caption to labels to readings and the diary, and never reaches the engine. Nimble can add guidance links to an alert within 10 seconds, but can never create, delay or suppress one.",
+        tradeoff: "The owner gets no alert from the live camera; the diary and PetAnalytics are its outputs. Alerts are in-app only.",
+      },
+      {
+        q: "Which model describes the dog, and where does it run?",
+        considered: ["Ollama. It lists Liquid's vision model but failed to load its vision projector."],
+        chose: "Liquid's LFM2.5-VL-3B through llama.cpp on the Mac, found by itself every 15 seconds. Only a model that advertises both LFM and VL is used, since a text-only model can't read the camera.",
+        tradeoff: "Good enough to say what the dog is doing and where, not proven as an alert trigger. It needs the Mac awake and the model running.",
+      },
+      {
+        q: "How does the owner reach it from anywhere without exposing it?",
+        chose: "It stays on the Mac, beside the camera and the models. Tailscale's serve proxy gives it a private HTTPS address on the owner's own devices, and both the web server and the API check that every request carries the Mac's own Tailscale login and the page's own origin.",
+        tradeoff: "The Mac has to be awake. Pairing a phone as the camera still opens a temporary public Cloudflare link, limited to the camera gateway.",
+      },
+    ],
+    next: [
+      "Validate the crying cut-off on real dog audio.",
+      "Give the two remaining child processes only what they need.",
+      "Deliver the same owner notification by SMS, push or email.",
+    ],
+    sources: [
+      { label: "README", url: "https://github.com/ishamishra0408/DogMaAI#readme" },
+      { label: "Manager setup", url: "https://github.com/ishamishra0408/DogMaAI/blob/main/MANAGER_SETUP.md" },
+      { label: "Tinybird", url: "https://github.com/ishamishra0408/DogMaAI/blob/main/TINYBIRD_INTEGRATION.md" },
+      { label: "Nimble", url: "https://github.com/ishamishra0408/DogMaAI/blob/main/NIMBLE_INTEGRATION.md" },
     ],
   },
 ];
