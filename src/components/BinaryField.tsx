@@ -3,14 +3,17 @@ import { useEffect, useRef } from "react";
 // The site's background: binary digits on deep navy, lit like a dithered field. A slow wave of
 // light drifts across the grid and a 4×4 ordered-dither threshold decides which digits it lights,
 // so the light reads as soft halftone bands while every other digit stays faint. The pointer
-// lights the digits under it and leaves rings of light that spread and fade, and a few digits
-// spark white inside the glow. One fixed canvas, repainted only where a digit changed. A still
+// lights the digits under it in lime and yellow and leaves rings that spread and fade, and a few
+// digits spark bright yellow inside the glow; the drifting bands stay blue. One fixed canvas, repainted
+// only where a digit changed. A still
 // frame for reduced motion; nothing runs while the tab is hidden.
 
 const FONT = 13; // CSS px
 const CELL_W = 9;
 const CELL_H = 17;
 const LEVELS = 16;
+const GLOW = LEVELS; // palette index where the pointer's shades start: 3 tint steps of LEVELS each
+const SPARK = LEVELS * 4; // the bright yellow spark
 const TAU = Math.PI * 2;
 
 // Ordered-dither thresholds: a digit is lit where the light beats its cell's threshold.
@@ -49,9 +52,19 @@ export function BinaryField() {
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ground = document.createElement("canvas");
     const gctx = ground.getContext("2d")!;
-    const colour = (b: number) =>
-      `rgba(${Math.round(60 + b * 150)}, ${Math.round(150 + b * 95)}, ${Math.round(205 + b * 50)}, ${(0.1 + b * 0.85).toFixed(3)})`;
-    const palette = Array.from({ length: LEVELS }, (_, i) => colour(i / (LEVELS - 1)));
+    // Blue for the field. Around the pointer, a lime-to-yellow gradient (#c7fc50 for its softer
+    // digits, #f9ff54 for its brightest), reached in three steps so the glow's edge stays soft;
+    // sparks are the yellow end at full strength.
+    const blue = (b: number) => [60 + b * 150, 150 + b * 95, 205 + b * 50];
+    const lime = (b: number) => [199 + b * 50, 252 + b * 3, 80 + b * 4];
+    const rgba = (c: number[], b: number) => `rgba(${c.map(Math.round).join(", ")}, ${(0.1 + b * 0.85).toFixed(3)})`;
+    const shade = (b: number, k: number) => blue(b).map((v, j) => v + (lime(b)[j] - v) * k);
+    const step = (i: number) => i / (LEVELS - 1);
+    const palette = [
+      ...Array.from({ length: LEVELS }, (_, i) => rgba(blue(step(i)), step(i))),
+      ...[1, 2, 3].flatMap((k) => Array.from({ length: LEVELS }, (_, i) => rgba(shade(step(i), k / 3), step(i)))),
+      "rgba(249, 255, 84, 1)",
+    ];
 
     let w = 0;
     let h = 0;
@@ -75,7 +88,7 @@ export function BinaryField() {
     let rowS3 = colA;
     let rowC3 = colA;
     let rowD = colA;
-    const buckets: number[][] = Array.from({ length: LEVELS }, () => []);
+    const buckets: number[][] = palette.map(() => []);
     const baseline = (r: number) => r * CELL_H + CELL_H - 4;
 
     let t = Math.random() * 40; // where the wave starts
@@ -289,9 +302,13 @@ export function BinaryField() {
           }
 
           let level: number;
-          if (spark[i] && (v > 0.3 || 0.5 + 0.5 * (seedS[i] * blinkC + seedC[i] * blinkS) > 0.97)) level = 15;
-          else if (b > thresholds[c & 3]) level = Math.min(14, 6 + Math.round(4 * glow[i] + 5 * v));
-          else level = 1 + Math.round(1.6 * glow[i]);
+          if (spark[i] && v > 0.3) level = SPARK;
+          else if (spark[i] && 0.5 + 0.5 * (seedS[i] * blinkC + seedC[i] * blinkS) > 0.97) level = 15;
+          else if (b > thresholds[c & 3]) {
+            level = Math.min(14, 6 + Math.round(4 * glow[i] + 5 * v));
+            const tint = Math.min(3, Math.round(v * 6)); // the pointer's light: full colour from v ≈ 0.4
+            if (tint > 0) level += GLOW + (tint - 1) * LEVELS;
+          } else level = 1 + Math.round(1.6 * glow[i]);
           if (level === shown[i]) continue;
           shown[i] = level;
           const x = c * CELL_W;
@@ -300,7 +317,7 @@ export function BinaryField() {
           buckets[level].push(i);
         }
       }
-      for (let level = 0; level < LEVELS; level++) {
+      for (let level = 0; level < palette.length; level++) {
         const list = buckets[level];
         if (!list.length) continue;
         ctx.fillStyle = palette[level];
